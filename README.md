@@ -138,6 +138,32 @@ O painel administrativo do Django fica em:
 
 http://127.0.0.1:8000/admin/
 
+Swagger da API:
+
+http://127.0.0.1:8000/api/docs/
+
+Redoc da API:
+
+http://127.0.0.1:8000/api/redoc/
+
+Login administrativo para o dashboard da secretaria:
+
+POST http://127.0.0.1:8000/api/admin/auth/login/
+
+Cadastro de usuario administrativo:
+
+POST http://127.0.0.1:8000/api/admin/users/
+
+O primeiro superusuario deve ser criado com `python manage.py createsuperuser`.
+Depois disso, somente um superusuario autenticado pode cadastrar outros usuarios
+administrativos pela API. O cadastro exige `username` e `password`; `email`,
+`first_name` e `last_name` sao opcionais.
+
+O usuario precisa estar ativo e com `is_staff=True`. Para invalidar refresh tokens no
+logout, rode as migrations depois de instalar as novas dependencias:
+
+python manage.py migrate
+
 ---
 
 ## 9. Atualizar dependências
