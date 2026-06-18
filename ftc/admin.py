@@ -48,6 +48,9 @@ class RegistroFilaAdmin(admin.ModelAdmin):
         'id',
         'publicacao',
         'posicao',
+        'prioridade',
+        'tipo',
+        'situacao',
         'codigo_solicitacao',
         'nome_mascarado',
         'data_solicitacao',
@@ -58,5 +61,12 @@ class RegistroFilaAdmin(admin.ModelAdmin):
         'cpf_mascarado',
         'cns_mascarado',
     )
-    list_filter = ('publicacao__especialidade', 'sexo')
+    list_filter = (
+        'publicacao__especialidade',
+        'publicacao__especialidade__tipo',
+        'prioridade',
+        'tipo',
+        'situacao',
+        'sexo',
+    )
     autocomplete_fields = ('publicacao', 'paciente')
