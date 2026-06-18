@@ -3,6 +3,35 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from datetime import date
+
+# testando rota /pacientes
+from .models import Paciente
+
+class PacienteViewTest(APITestCase):
+
+    def test_retorna_dados_mascarados(self):
+
+        Paciente.objects.create(
+            cns="123456789012345",
+            nome_completo="Testando Marques Melo",
+            data_nascimento=date(2000, 1, 1),
+            sexo="M"
+        )
+
+        response = self.client.get(reverse("pacientes"))
+
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(
+            response.data[0]["cns"],
+            "***********2345"
+        )
+
+        self.assertEqual(
+            response.data[0]["nome_completo"],
+            "T******* M****** M***"
+        )
 
 class AdminAuthTests(APITestCase):
     def setUp(self):

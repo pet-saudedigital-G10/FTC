@@ -11,6 +11,7 @@ from rest_framework_simplejwt.serializers import (
 from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from .models import Paciente
 
 ADMIN_AUTH_ERROR = 'Credenciais invalidas ou usuario sem permissao administrativa.'
 
@@ -164,3 +165,26 @@ class AdminLogoutSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {'refresh': 'Refresh token invalido ou expirado.'}
             ) from exc
+        
+class PacienteSerializer(serializers.ModelSerializer):
+    cns = serializers.SerializerMethodField()
+    nome_completo = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Paciente
+        fields = '__all__'
+
+    def get_cns(self, obj):
+        return f"{'*' * (len(obj.cns)-4)}{obj.cns[-4:]}"
+
+    def get_nome_completo(self, obj):
+        partes = obj.nome_completo.split()
+
+        resultado = []
+
+        for parte in partes:
+            resultado.append(
+                parte[0] + "*" * (len(parte) - 1)
+            )
+
+        return " ".join(resultado)

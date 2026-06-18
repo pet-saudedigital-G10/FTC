@@ -6,6 +6,7 @@ from .views import (
     AdminTokenObtainPairView,
     AdminTokenRefreshView,
     AdminUserCreateView,
+    PacienteListView,
 )
 
 urlpatterns = [
@@ -18,4 +19,9 @@ urlpatterns = [
     ),
     path('admin/auth/logout/', AdminLogoutView.as_view(), name='admin-logout'),
     path('admin/auth/me/', AdminMeView.as_view(), name='admin-me'),
+    path(
+        'pacientes/',
+        PacienteListView.as_view(),
+        name='pacientes'
+    ),
 ]
