@@ -17,7 +17,30 @@ from ftc.serializers import (
     AdminUserSerializer,
 )
 
+from .models import Paciente
+from .serializers import PacienteSerializer
 
+
+class PacienteListView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        tags=['Pacientes'],
+        summary='Listar pacientes',
+        description='Retorna pacientes com dados sensíveis mascarados.',
+        responses={200: PacienteSerializer(many=True)}
+    )
+
+    def get(self, request):
+        pacientes = Paciente.objects.all()
+
+        serializer = PacienteSerializer(
+            pacientes,
+            many=True
+        )
+
+        return Response(serializer.data)
+    
 class AdminUserCreateView(CreateAPIView):
     permission_classes = [IsSuperUser]
     serializer_class = AdminUserCreateSerializer

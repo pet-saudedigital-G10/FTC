@@ -9,6 +9,7 @@ from .views import (
     EspecialidadeListView,
     FilaOpcoesView,
     RegistroFilaListView,
+    PacienteListView,
 )
 
 urlpatterns = [
@@ -28,4 +29,9 @@ urlpatterns = [
         name='fila-especialidade-list',
     ),
     path('filas/opcoes/', FilaOpcoesView.as_view(), name='fila-opcoes'),
+    path(
+        'pacientes/',
+        PacienteListView.as_view(),
+        name='pacientes'
+    ),
 ]
