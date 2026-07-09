@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FTC</title>
+</head>
+<body>
+    <nav>
+        <!-- VISÃO DO SERVIDOR-->
+        {% if user.is_authenticated %}
+            <span>Logado como Servidor: <strong>{{ user.username }}</strong></span> |
+            <a href="{% url 'users:cadastro_paciente' %}">Cadastrar Novo Paciente</a> |
+            <a href="#">Listar Solicitações</a> |
+            
+            <form style="display:inline;" action="{% url 'users:logout_servidor' %}" method="post">
+                {% csrf_token %}
+                <button type="submit">Sair do Sistema</button>
+            </form>
+
+        <!-- VISÃO DO PACIENTE -->
+        {% elif request.session.paciente_cns %}
+            <span>Bem-vindo(a), <strong>{{ request.session.paciente_nome }}</strong> (CNS: {{ request.session.paciente_cns }})</span> |
+            <a href="#">Solicitações</a> |
+            
+            <form style="display:inline;" action="{% url 'users:logout_paciente' %}" method="post">
+                {% csrf_token %}
+                <button type="submit">Sair</button>
+            </form>
+
+        <!-- VISÃO DO VISITANTE  -->
+        {% else %}
+            <strong>Acesso Cidadão:</strong>
+            <a href="{% url 'users:login_paciente' %}">Entrar</a> | 
+            
+            <strong>Acesso Profissional:</strong>
+            <a href="{% url 'users:login_servidor' %}">Entrar</a> |
+            <a href="{% url 'users:cadastro_servidor' %}">Primeiro Acesso</a>
+        {% endif %}
+    </nav>
+    
+    <hr>
+    
+    
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+            <li style="color: green; font-weight: bold;">{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <p>Selecione uma das opções no menu superior para começar.</p>
+</body>
+</html>

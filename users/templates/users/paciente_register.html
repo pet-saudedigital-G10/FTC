@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Paciente (SUS)</title>
+</head>
+<body>
+    <nav>
+        <a href="/">Voltar para a Home</a>
+    </nav>
+
+    <h1>Registro de Novo Paciente</h1>
+    <p>Atenção Servidor: <b>Preencha os dados do cidadão com base no documento oficial.</b></p>
+
+    <form class="form-with-validation" action="{% url 'users:cadastro_paciente' %}" method="post">
+        {% csrf_token %} 
+        {{ form.as_p }} 
+        <button class="form-submit">Cadastrar Paciente</button>
+    </form>
+</body>
+</html>

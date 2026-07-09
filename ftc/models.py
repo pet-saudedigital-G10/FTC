@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import AbstractUser
 
 # Create your models here.
 
@@ -12,6 +13,7 @@ class Paciente(models.Model):
     nome = models.CharField(max_length=255, verbose_name="Nome")
     ano_nascimento = models.PositiveIntegerField(verbose_name="Ano de Nascimento")
     sexo = models.CharField(max_length=1, choices=SEXO, verbose_name="Sexo")
+    cpf = models.CharField(max_length=14, unique=True, verbose_name="CPF", blank=True, null=True)
 
     class Meta:
         # Força o nome da tabela no banco de dados para ser exatamente 'pacientes'
@@ -45,3 +47,10 @@ class Solicitacoes(models.Model):
 
     def __str__(self):
         return f"Solicitação {self.cod_solicitacao}: Paciente {self.paciente.nome} - Especialidade {self.especialidade.nome_especialidade}"
+    
+class Servidor(AbstractUser):
+    cpf = models.CharField(max_length=14, unique=True, verbose_name="CPF")
+    carteira_identidade_funcional = models.CharField(max_length=14, unique=True, verbose_name="Identidade Funcional")
+
+    def __str__(self):
+        return f"{self.username} - Funcional: {self.carteira_identidade_funcional}"

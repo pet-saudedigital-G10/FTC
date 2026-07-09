@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Servidor</title>
+</head>
+<body>
+    <nav>
+        <a href="/">Home</a>
+    </nav>
+
+    <h1>Cadastro de Novo Servidor</h1>
+    <p>Registre sua Identidade Funcional para obter acesso ao sistema.</p>
+
+    <form class="form-with-validation" action="{% url 'users:cadastro_servidor' %}" method="post">
+        {% csrf_token %} 
+        {{ form.as_p }} 
+        <button class="form-submit">Criar Conta de Servidor</button>
+    </form>
+</body>
+</html>

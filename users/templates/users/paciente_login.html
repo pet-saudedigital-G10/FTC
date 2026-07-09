@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acesso Paciente</title>
+</head>
+<body>
+    <nav>
+        <a href="/">Voltar para a Home</a>
+    </nav>
+    
+    <h1>Portal do Paciente</h1>
+    <p>Informe seu CPF e Ano de Nascimentos</p>
+
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+            <li style="color: red;">{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <form class="form-with-validation" action="{% url 'users:login_paciente' %}" method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Acessar</button>
+    </form>
+</body>
+</html>
