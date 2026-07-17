@@ -12,7 +12,11 @@ from .fila import (
     FilaOpcoesSerializer,
     FiltroOpcaoSerializer,
     RegistroFilaSerializer,
+    RegistroFilaPublicSerializer,
 )
+
+
+from .auth import PacienteSerializer
 
 __all__ = [
     'AdminLogoutSerializer',
@@ -26,4 +30,6 @@ __all__ = [
     'FilaOpcoesSerializer',
     'FiltroOpcaoSerializer',
     'RegistroFilaSerializer',
+    'PacienteSerializer',
+    'RegistroFilaPublicSerializer',
 ]

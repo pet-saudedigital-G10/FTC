@@ -6,7 +6,7 @@ from rest_framework.test import APITestCase
 from datetime import date
 
 # testando rota /pacientes
-from .models import Paciente
+from ftc.models import Paciente
 
 class PacienteViewTest(APITestCase):
 

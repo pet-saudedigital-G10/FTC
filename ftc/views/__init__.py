@@ -4,6 +4,7 @@ from .auth import (
     AdminTokenObtainPairView,
     AdminTokenRefreshView,
     AdminUserCreateView,
+    PacienteListView,
 )
 from .fila import EspecialidadeListView, FilaOpcoesView, RegistroFilaListView
 
@@ -16,4 +17,5 @@ __all__ = [
     'EspecialidadeListView',
     'FilaOpcoesView',
     'RegistroFilaListView',
+    'PacienteListView',
 ]

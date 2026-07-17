@@ -12,7 +12,10 @@ from .views import (
     PacienteListView,
 )
 
+from ftc.views.fila import ConsultaPosicaoFilaAPIView
+
 urlpatterns = [
+    path('consultar/', ConsultaPosicaoFilaAPIView.as_view(), name='consulta-fila'),
     path('admin/users/', AdminUserCreateView.as_view(), name='admin-user-create'),
     path('admin/auth/login/', AdminTokenObtainPairView.as_view(), name='admin-login'),
     path(

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Especialidade, Paciente, PublicacaoFila, RegistroFila
+from ftc.models import Especialidade, Paciente, PublicacaoFila, RegistroFila
 
 
 @admin.register(Paciente)

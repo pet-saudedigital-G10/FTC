@@ -6,14 +6,37 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework import status
 from rest_framework.views import APIView
+from ftc.selectors import get_posicoes_paciente_ativas
 
 from ftc.models import Especialidade, PublicacaoFila, RegistroFila
 from ftc.serializers import (
     EspecialidadeSerializer,
     FilaOpcoesSerializer,
     RegistroFilaSerializer,
+    RegistroFilaPublicSerializer
 )
+
+class ConsultaPosicaoFilaAPIView(APIView):
+
+
+    def post(self, request):
+        cpf = request.data.get('cpf', '').strip()
+
+        if not cpf or len(cpf) != 11:
+            return Response(
+                {"erro": "CPF inválido ou não informado."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        registros =  RegistroFilaPublicSerializer(cpf)
+        serializer = get_posicoes_paciente_ativas(cpf, many = True)
+
+        return Response({
+            "encontrado": registros.exists(),
+            "filas": serializer.data
+        }, status=status.HTTP_200_OK)
 
 
 def normalizar(valor):
