@@ -3,10 +3,9 @@ from ftc.models import Paciente, Especialidade, PublicacaoFila, RegistroFila
 
 def get_posicoes_paciente_ativas(*, cpf: str) -> QuerySet[RegistroFila]:
 
-
     try:
         paciente = Paciente.objects.get(cpf=cpf)
-    except:
+    except Paciente.DoesNotExist:
         return RegistroFila.objects.none()
     
     publicados_recentes = PublicacaoFila.objects.filter(status=PublicacaoFila.Status.PUBLICADA).order_by('especialidade', '-competencia', '-versao').distinct('especialidade')
