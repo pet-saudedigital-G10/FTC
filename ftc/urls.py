@@ -6,6 +6,9 @@ from .views import (
     AdminTokenObtainPairView,
     AdminTokenRefreshView,
     AdminUserCreateView,
+    EspecialidadeListView,
+    FilaOpcoesView,
+    RegistroFilaListView,
     PacienteListView,
 )
 
@@ -19,6 +22,13 @@ urlpatterns = [
     ),
     path('admin/auth/logout/', AdminLogoutView.as_view(), name='admin-logout'),
     path('admin/auth/me/', AdminMeView.as_view(), name='admin-me'),
+    path('filas/registros/', RegistroFilaListView.as_view(), name='fila-registro-list'),
+    path(
+        'filas/especialidades/',
+        EspecialidadeListView.as_view(),
+        name='fila-especialidade-list',
+    ),
+    path('filas/opcoes/', FilaOpcoesView.as_view(), name='fila-opcoes'),
     path(
         'pacientes/',
         PacienteListView.as_view(),
