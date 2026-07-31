@@ -15,10 +15,9 @@ from ftc.serializers import (
     AdminTokenResponseSerializer,
     AdminUserCreateSerializer,
     AdminUserSerializer,
+    PacienteSerializer,
 )
-
-from .models import Paciente
-from .serializers import PacienteSerializer
+from ftc.models import Paciente
 
 
 class PacienteListView(APIView):

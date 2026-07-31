@@ -6,6 +6,7 @@ from .auth import (
     AdminTokenResponseSerializer,
     AdminUserCreateSerializer,
     AdminUserSerializer,
+    PacienteSerializer,
 )
 from .fila import (
     EspecialidadeSerializer,
@@ -22,6 +23,7 @@ __all__ = [
     'AdminTokenResponseSerializer',
     'AdminUserCreateSerializer',
     'AdminUserSerializer',
+    'PacienteSerializer',
     'EspecialidadeSerializer',
     'FilaOpcoesSerializer',
     'FiltroOpcaoSerializer',
