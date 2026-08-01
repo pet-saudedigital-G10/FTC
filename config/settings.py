@@ -57,8 +57,19 @@ ALLOWED_HOSTS = env_list(
     'ALLOWED_HOSTS',
     '127.0.0.1,localhost' if DEBUG else '',
 )
-CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS')
 
+# The browser application is served from a different origin in development.
+# Keep this allow-list explicit: credentialed CORS requests must never use '*'.
+LOCAL_FRONTEND_ORIGINS = 'http://localhost:3000,http://127.0.0.1:3000'
+CSRF_TRUSTED_ORIGINS = env_list(
+    'CSRF_TRUSTED_ORIGINS',
+    LOCAL_FRONTEND_ORIGINS if DEBUG else '',
+)
+CORS_ALLOWED_ORIGINS = env_list(
+    'CORS_ALLOWED_ORIGINS',
+    LOCAL_FRONTEND_ORIGINS if DEBUG else '',
+)
+CORS_ALLOW_CREDENTIALS = True
 
 # Application definition
 
@@ -69,6 +80,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'drf_spectacular',
@@ -77,6 +89,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -208,6 +221,9 @@ SPECTACULAR_SETTINGS = {
 SECURE_SSL_REDIRECT = env_bool('SECURE_SSL_REDIRECT', not DEBUG)
 SESSION_COOKIE_SECURE = env_bool('SESSION_COOKIE_SECURE', not DEBUG)
 CSRF_COOKIE_SECURE = env_bool('CSRF_COOKIE_SECURE', not DEBUG)
+SESSION_COOKIE_SAMESITE = os.getenv('SESSION_COOKIE_SAMESITE', 'Lax')
+CSRF_COOKIE_SAMESITE = os.getenv('CSRF_COOKIE_SAMESITE', 'Lax')
+CSRF_FAILURE_VIEW = 'ftc.views.auth.csrf_failure'
 SECURE_HSTS_SECONDS = int(
     os.getenv('SECURE_HSTS_SECONDS', '0' if DEBUG else '31536000')
 )

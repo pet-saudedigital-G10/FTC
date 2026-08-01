@@ -1,12 +1,12 @@
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.test import APITestCase
+from rest_framework.test import APIClient, APITestCase
 
 from datetime import date
 
 # testando rota /pacientes
-from .models import Paciente
+from ftc.models import Paciente
 
 class PacienteViewTest(APITestCase):
 
@@ -65,6 +65,57 @@ class AdminAuthTests(APITestCase):
         self.assertIn('access', response.data)
         self.assertIn('refresh', response.data)
         self.assertEqual(response.data['user']['username'], self.staff_user.username)
+
+    def test_csrf_endpoint_issues_cookie_for_frontend_origin(self):
+        client = APIClient(enforce_csrf_checks=True)
+
+        response = client.get(
+            reverse('csrf-token'),
+            HTTP_ORIGIN='http://localhost:3000',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('csrfToken', response.json())
+        self.assertIn('csrftoken', response.cookies)
+        self.assertEqual(
+            response['Access-Control-Allow-Origin'],
+            'http://localhost:3000',
+        )
+        self.assertEqual(response['Access-Control-Allow-Credentials'], 'true')
+
+    def test_session_login_requires_csrf_and_creates_session(self):
+        client = APIClient(enforce_csrf_checks=True)
+        csrf_response = client.get(
+            reverse('csrf-token'),
+            HTTP_ORIGIN='http://localhost:3000',
+        )
+        csrf_token = csrf_response.json()['csrfToken']
+
+        response = client.post(
+            reverse('admin-session-login'),
+            {'username': self.staff_user.username, 'password': self.password},
+            format='json',
+            HTTP_ORIGIN='http://localhost:3000',
+            HTTP_X_CSRFTOKEN=csrf_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()['user']['username'], self.staff_user.username)
+        self.assertIn('sessionid', response.cookies)
+        self.assertIn('csrftoken', response.cookies)
+
+    def test_session_login_returns_json_when_csrf_token_is_missing(self):
+        client = APIClient(enforce_csrf_checks=True)
+
+        response = client.post(
+            reverse('admin-session-login'),
+            {'username': self.staff_user.username, 'password': self.password},
+            format='json',
+            HTTP_ORIGIN='http://localhost:3000',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.json()['detail'], 'Falha na verificacao CSRF.')
 
     def test_common_user_cannot_login_to_admin_dashboard(self):
         response = self.client.post(

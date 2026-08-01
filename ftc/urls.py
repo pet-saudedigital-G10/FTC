@@ -3,6 +3,8 @@ from django.urls import path
 from .views import (
     AdminLogoutView,
     AdminMeView,
+    admin_session_login_view,
+    csrf_token_view,
     AdminTokenObtainPairView,
     AdminTokenRefreshView,
     AdminUserCreateView,
@@ -13,7 +15,13 @@ from .views import (
 )
 
 urlpatterns = [
+    path('csrf/', csrf_token_view, name='csrf-token'),
     path('admin/users/', AdminUserCreateView.as_view(), name='admin-user-create'),
+    path(
+        'admin/auth/session/login/',
+        admin_session_login_view,
+        name='admin-session-login',
+    ),
     path('admin/auth/login/', AdminTokenObtainPairView.as_view(), name='admin-login'),
     path(
         'admin/auth/refresh/',
