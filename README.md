@@ -150,17 +150,9 @@ Login administrativo para o dashboard da secretaria:
 
 POST http://127.0.0.1:8000/api/admin/auth/login/
 
-Este endpoint retorna JWT e **nao** e uma rota do Django Admin. Para a
-autenticacao por sessao do frontend, primeiro obtenha o CSRF e entao use:
-
-GET http://127.0.0.1:8000/api/csrf/
-
-POST http://127.0.0.1:8000/api/admin/auth/session/login/
-
-O frontend deve usar sempre o mesmo host (`localhost` em ambos os servidores,
-ou `127.0.0.1` em ambos), enviar `credentials: 'include'` e incluir o valor de
-`csrfToken` em `X-CSRFToken` no POST. As origens locais permitidas ficam em
-`CSRF_TRUSTED_ORIGINS` e `CORS_ALLOWED_ORIGINS` no `.env`.
+Este endpoint retorna JWT e **nao** e uma rota do Django Admin. A API aceita
+autenticacao exclusivamente pelo header `Authorization: Bearer <access_token>`;
+cookies e sessoes Django nao sao usados pelo frontend.
 
 Cadastro de usuario administrativo:
 

@@ -1,12 +1,3 @@
-import json
-
-from django.conf import settings
-from django.contrib.auth import authenticate, login
-from django.http import JsonResponse
-from django.middleware.csrf import get_token
-from django.views.csrf import csrf_failure as django_csrf_failure
-from django.views.decorators.csrf import ensure_csrf_cookie
-from django.views.decorators.http import require_GET, require_POST
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.generics import CreateAPIView
@@ -32,61 +23,6 @@ from ftc.serializers import (
     PacienteSerializer,
 )
 from ftc.models import Paciente
-
-
-def csrf_failure(request, reason=''):
-    """Return JSON CSRF errors for the API and preserve the Django Admin UI."""
-    if not request.path.startswith('/api/'):
-        return django_csrf_failure(request, reason=reason)
-
-    payload = {'detail': 'Falha na verificacao CSRF.'}
-    if settings.DEBUG:
-        payload['reason'] = reason
-    return JsonResponse(payload, status=status.HTTP_403_FORBIDDEN)
-
-
-@require_GET
-@ensure_csrf_cookie
-def csrf_token_view(request):
-    """Issue a CSRF cookie and expose its masked token to the frontend."""
-    return JsonResponse({'csrfToken': get_token(request)})
-
-
-@require_POST
-def admin_session_login_view(request):
-    """Authenticate a staff user into a Django session, with CSRF protection on."""
-    try:
-        payload = json.loads(request.body.decode('utf-8'))
-    except (UnicodeDecodeError, json.JSONDecodeError):
-        return JsonResponse({'detail': 'JSON invalido.'}, status=status.HTTP_400_BAD_REQUEST)
-
-    if not isinstance(payload, dict):
-        return JsonResponse({'detail': 'JSON invalido.'}, status=status.HTTP_400_BAD_REQUEST)
-
-    username = payload.get('username')
-    password = payload.get('password')
-    if not username or not password:
-        return JsonResponse(
-            {'detail': 'Usuario e senha sao obrigatorios.'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    user = authenticate(request, username=username, password=password)
-    if user is None or not user.is_staff:
-        return JsonResponse(
-            {'detail': 'Credenciais invalidas ou usuario sem permissao administrativa.'},
-            status=status.HTTP_401_UNAUTHORIZED,
-        )
-
-    login(request, user)
-    # login() rotates the CSRF secret; return a token for the newly issued cookie.
-    return JsonResponse(
-        {
-            'detail': 'Login realizado com sucesso.',
-            'csrfToken': get_token(request),
-            'user': AdminUserSerializer(user).data,
-        }
-    )
 
 
 class PacienteListView(APIView):

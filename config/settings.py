@@ -58,18 +58,13 @@ ALLOWED_HOSTS = env_list(
     '127.0.0.1,localhost' if DEBUG else '',
 )
 
-# The browser application is served from a different origin in development.
-# Keep this allow-list explicit: credentialed CORS requests must never use '*'.
+# Allow explicit frontend origins to send JWT Authorization headers directly
+# when the Next.js same-origin proxy is not being used.
 LOCAL_FRONTEND_ORIGINS = 'http://localhost:3000,http://127.0.0.1:3000'
-CSRF_TRUSTED_ORIGINS = env_list(
-    'CSRF_TRUSTED_ORIGINS',
-    LOCAL_FRONTEND_ORIGINS if DEBUG else '',
-)
 CORS_ALLOWED_ORIGINS = env_list(
     'CORS_ALLOWED_ORIGINS',
     LOCAL_FRONTEND_ORIGINS if DEBUG else '',
 )
-CORS_ALLOW_CREDENTIALS = True
 
 # Application definition
 
@@ -90,6 +85,8 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    # Sessions and CSRF remain only for Django's built-in /admin/ interface.
+    # REST_FRAMEWORK below authenticates API requests exclusively with JWT.
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -178,7 +175,6 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
@@ -224,7 +220,6 @@ SESSION_COOKIE_SECURE = env_bool('SESSION_COOKIE_SECURE', not DEBUG)
 CSRF_COOKIE_SECURE = env_bool('CSRF_COOKIE_SECURE', not DEBUG)
 SESSION_COOKIE_SAMESITE = os.getenv('SESSION_COOKIE_SAMESITE', 'Lax')
 CSRF_COOKIE_SAMESITE = os.getenv('CSRF_COOKIE_SAMESITE', 'Lax')
-CSRF_FAILURE_VIEW = 'ftc.views.auth.csrf_failure'
 SECURE_HSTS_SECONDS = int(
     os.getenv('SECURE_HSTS_SECONDS', '0' if DEBUG else '31536000')
 )
