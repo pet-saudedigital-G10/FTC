@@ -14,6 +14,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from ftc.models import Paciente
 
 ADMIN_AUTH_ERROR = 'Credenciais invalidas ou usuario sem permissao administrativa.'
+CIDADAO_AUTH_ERROR = 'CPF ou senha invalidos, ou cadastro sem paciente vinculado.'
 
 
 class AdminUserSerializer(serializers.ModelSerializer):
@@ -84,6 +85,24 @@ class AdminUserCreateSerializer(serializers.ModelSerializer):
         )
 
 
+class CidadaoUserSerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
+    cpf = serializers.CharField(read_only=True)
+    nome_completo = serializers.CharField(read_only=True)
+
+
+class CidadaoTokenResponseSerializer(serializers.Serializer):
+    access = serializers.CharField(read_only=True)
+    refresh = serializers.CharField(read_only=True)
+    user = CidadaoUserSerializer(read_only=True)
+
+
+class CidadaoTokenRefreshResponseSerializer(serializers.Serializer):
+    access = serializers.CharField(read_only=True)
+    refresh = serializers.CharField(read_only=True, required=False)
+    user = CidadaoUserSerializer(read_only=True)
+
+
 class AdminTokenResponseSerializer(serializers.Serializer):
     access = serializers.CharField(read_only=True)
     refresh = serializers.CharField(read_only=True)
@@ -116,6 +135,35 @@ class AdminTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         data['user'] = AdminUserSerializer(self.user).data
         return data
+
+
+class CidadaoTokenObtainPairSerializer(TokenObtainPairSerializer):
+    default_error_messages = {
+        'no_active_account': CIDADAO_AUTH_ERROR,
+    }
+
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        paciente = self._get_paciente(self.user)
+        data['user'] = CidadaoUserSerializer({
+            'id': self.user.pk,
+            'cpf': paciente.cpf,
+            'nome_completo': paciente.nome_completo,
+        }).data
+        return data
+
+    def _get_paciente(self, user):
+        cpf = user.get_username()
+        if user.is_staff or len(cpf) != 11 or not cpf.isdigit():
+            raise AuthenticationFailed(CIDADAO_AUTH_ERROR, code='citizen_access_denied')
+
+        try:
+            return Paciente.objects.get(cpf=cpf)
+        except Paciente.DoesNotExist as exc:
+            raise AuthenticationFailed(
+                CIDADAO_AUTH_ERROR,
+                code='citizen_access_denied',
+            ) from exc
 
 
 class AdminTokenRefreshSerializer(TokenRefreshSerializer):
@@ -155,18 +203,84 @@ class AdminTokenRefreshSerializer(TokenRefreshSerializer):
         return user
 
 
+class CidadaoTokenRefreshSerializer(TokenRefreshSerializer):
+    default_error_messages = {
+        'no_active_account': CIDADAO_AUTH_ERROR,
+    }
+
+    def validate(self, attrs):
+        try:
+            refresh = self.token_class(attrs['refresh'])
+        except TokenError as exc:
+            raise InvalidToken(str(exc)) from exc
+
+        user_id = refresh.payload.get(api_settings.USER_ID_CLAIM)
+        user = self._get_cidadao_user(user_id)
+
+        data = super().validate(attrs)
+        paciente = Paciente.objects.get(cpf=user.get_username())
+        data['user'] = CidadaoUserSerializer({
+            'id': user.pk,
+            'cpf': paciente.cpf,
+            'nome_completo': paciente.nome_completo,
+        }).data
+        return data
+
+    def _get_cidadao_user(self, user_id):
+        if user_id is None:
+            raise AuthenticationFailed(CIDADAO_AUTH_ERROR, code='no_active_account')
+
+        User = get_user_model()
+        try:
+            user = User.objects.get(**{api_settings.USER_ID_FIELD: user_id})
+        except (TypeError, ValueError, User.DoesNotExist) as exc:
+            raise AuthenticationFailed(
+                CIDADAO_AUTH_ERROR,
+                code='no_active_account',
+            ) from exc
+
+        cpf = user.get_username()
+        if (
+            not user.is_active
+            or user.is_staff
+            or len(cpf) != 11
+            or not cpf.isdigit()
+            or not Paciente.objects.filter(cpf=cpf).exists()
+        ):
+            raise AuthenticationFailed(
+                CIDADAO_AUTH_ERROR,
+                code='citizen_access_denied',
+            )
+
+        return user
+
+
 class AdminLogoutSerializer(serializers.Serializer):
     refresh = serializers.CharField(write_only=True)
 
-    def save(self, **kwargs):
+    def validate_refresh(self, value):
         try:
-            RefreshToken(self.validated_data['refresh']).blacklist()
+            token = RefreshToken(value)
         except TokenError as exc:
             raise serializers.ValidationError(
-                {'refresh': 'Refresh token invalido ou expirado.'}
+                'Refresh token invalido ou expirado.'
             ) from exc
+
+        request = self.context.get('request')
+        token_user_id = token.payload.get(api_settings.USER_ID_CLAIM)
+        if request is None or str(token_user_id) != str(request.user.pk):
+            raise serializers.ValidationError(
+                'O refresh token nao pertence ao usuario autenticado.'
+            )
+
+        self.refresh_token = token
+        return value
+
+    def save(self, **kwargs):
+        self.refresh_token.blacklist()
         
 class PacienteSerializer(serializers.ModelSerializer):
+    cpf = serializers.SerializerMethodField()
     cns = serializers.SerializerMethodField()
     nome_completo = serializers.SerializerMethodField()
 
@@ -174,10 +288,18 @@ class PacienteSerializer(serializers.ModelSerializer):
         model = Paciente
         fields = '__all__'
 
-    def get_cns(self, obj):
-        return f"{'*' * (len(obj.cns)-4)}{obj.cns[-4:]}"
+    def get_cpf(self, obj: Paciente) -> str:
+        return self._mascarar_documento(obj.cpf)
 
-    def get_nome_completo(self, obj):
+    def get_cns(self, obj: Paciente) -> str:
+        return self._mascarar_documento(obj.cns)
+
+    def _mascarar_documento(self, valor: str | None) -> str:
+        if not valor:
+            return ''
+        return f"{'*' * max(len(valor) - 4, 0)}{valor[-4:]}"
+
+    def get_nome_completo(self, obj: Paciente) -> str:
         partes = obj.nome_completo.split()
 
         resultado = []

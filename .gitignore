@@ -1,7 +1,37 @@
-﻿venv/
+# Python environments and bytecode
+.venv/
+venv/
+env/
+ENV/
 __pycache__/
-.env
-db.sqlite3
-media/
-.\venv
+*.py[cod]
+*$py.class
 
+# Local environment files and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# Local databases and runtime uploads
+*.sqlite3
+media/
+
+# Source documents can contain patient or regulation data
+docs/*.pdf
+docs/*.csv
+docs/*.xls
+docs/*.xlsx
+
+# Tooling and test artifacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/

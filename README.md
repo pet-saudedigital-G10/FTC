@@ -176,6 +176,24 @@ logout, rode as migrations depois de instalar as novas dependencias:
 
 python manage.py migrate
 
+### Acesso do cidadao
+
+O login do cidadao usa uma conta Django comum (`is_staff=False`) cujo `username`
+deve ser exatamente o CPF com 11 digitos de um registro existente em `Paciente`.
+Essa vinculacao impede que uma conta consulte filas de outro CPF.
+
+Endpoints usados pelo frontend:
+
+- `POST /api/auth/cidadao/login/`
+- `POST /api/auth/cidadao/refresh/`
+- `POST /api/auth/cidadao/logout/`
+- `GET /api/auth/cidadao/me/`
+- `GET /api/cidadao/filas/`
+
+A conta pode ser criada pelo Django Admin: informe o CPF sem pontuacao como nome
+de usuario, defina uma senha e mantenha as permissoes de equipe e superusuario
+desmarcadas. O paciente com esse CPF precisa existir antes do primeiro login.
+
 ---
 
 ## 9. Atualizar dependências

@@ -28,10 +28,24 @@ class PacienteViewTest(APITestCase):
             "***********2345"
         )
 
+        self.assertEqual(response.data[0]["cpf"], "")
+
         self.assertEqual(
             response.data[0]["nome_completo"],
             "T******* M****** M***"
         )
+
+    def test_mascara_cpf_e_aceita_cns_ausente(self):
+        Paciente.objects.create(
+            cpf="12345678901",
+            nome_completo="Paciente CPF",
+        )
+
+        response = self.client.get(reverse("pacientes"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data[0]["cpf"], "*******8901")
+        self.assertEqual(response.data[0]["cns"], "")
 
 class AdminAuthTests(APITestCase):
     def setUp(self):

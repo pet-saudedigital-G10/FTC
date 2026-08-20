@@ -6,6 +6,11 @@ from .auth import (
     AdminTokenResponseSerializer,
     AdminUserCreateSerializer,
     AdminUserSerializer,
+    CidadaoTokenObtainPairSerializer,
+    CidadaoTokenRefreshResponseSerializer,
+    CidadaoTokenRefreshSerializer,
+    CidadaoTokenResponseSerializer,
+    CidadaoUserSerializer,
     PacienteSerializer,
 )
 from .fila import (
@@ -23,6 +28,11 @@ __all__ = [
     'AdminTokenResponseSerializer',
     'AdminUserCreateSerializer',
     'AdminUserSerializer',
+    'CidadaoTokenObtainPairSerializer',
+    'CidadaoTokenRefreshResponseSerializer',
+    'CidadaoTokenRefreshSerializer',
+    'CidadaoTokenResponseSerializer',
+    'CidadaoUserSerializer',
     'PacienteSerializer',
     'EspecialidadeSerializer',
     'FilaOpcoesSerializer',

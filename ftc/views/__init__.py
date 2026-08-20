@@ -7,8 +7,17 @@ from .auth import (
     AdminTokenObtainPairView,
     AdminTokenRefreshView,
     AdminUserCreateView,
+    CidadaoLogoutView,
+    CidadaoMeView,
+    CidadaoTokenObtainPairView,
+    CidadaoTokenRefreshView,
 )
-from .fila import EspecialidadeListView, FilaOpcoesView, RegistroFilaListView
+from .fila import (
+    CidadaoRegistroFilaListView,
+    EspecialidadeListView,
+    FilaOpcoesView,
+    RegistroFilaListView,
+)
 
 __all__ = [
     'AdminLogoutView',
@@ -19,6 +28,11 @@ __all__ = [
     'AdminTokenObtainPairView',
     'AdminTokenRefreshView',
     'AdminUserCreateView',
+    'CidadaoLogoutView',
+    'CidadaoMeView',
+    'CidadaoTokenObtainPairView',
+    'CidadaoTokenRefreshView',
+    'CidadaoRegistroFilaListView',
     'EspecialidadeListView',
     'FilaOpcoesView',
     'RegistroFilaListView',

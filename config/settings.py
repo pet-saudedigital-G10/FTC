@@ -192,6 +192,7 @@ REST_FRAMEWORK = {
         'anon': os.getenv('DRF_ANON_THROTTLE_RATE', '100/hour'),
         'user': os.getenv('DRF_USER_THROTTLE_RATE', '1000/hour'),
         'admin_login': os.getenv('ADMIN_LOGIN_THROTTLE_RATE', '5/minute'),
+        'cidadao_login': os.getenv('CIDADAO_LOGIN_THROTTLE_RATE', '5/minute'),
         'token_refresh': os.getenv('TOKEN_REFRESH_THROTTLE_RATE', '10/minute'),
     },
 }
