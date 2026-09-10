@@ -8,8 +8,9 @@ from .views import (
     AdminUserCreateView,
     EspecialidadeListView,
     FilaOpcoesView,
-    RegistroFilaListView,
     PacienteListView,
+    RegistroFilaComprovanteView,
+    RegistroFilaListView,
 )
 
 urlpatterns = [
@@ -24,6 +25,11 @@ urlpatterns = [
     path('admin/auth/me/', AdminMeView.as_view(), name='admin-me'),
     path('filas/registros/', RegistroFilaListView.as_view(), name='fila-registro-list'),
     path(
+        'filas/registros/<int:pk>/comprovante/',
+        RegistroFilaComprovanteView.as_view(),
+        name='fila-registro-comprovante',
+    ),
+    path(
         'filas/especialidades/',
         EspecialidadeListView.as_view(),
         name='fila-especialidade-list',
@@ -35,3 +41,4 @@ urlpatterns = [
         name='pacientes'
     ),
 ]
+

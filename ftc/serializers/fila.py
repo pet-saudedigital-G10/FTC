@@ -76,6 +76,19 @@ class RegistroFilaSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class RegistroFilaComprovanteSerializer(RegistroFilaSerializer):
+    emitido_em = serializers.SerializerMethodField()
+
+    class Meta(RegistroFilaSerializer.Meta):
+        fields = RegistroFilaSerializer.Meta.fields + ('emitido_em',)
+        read_only_fields = fields
+
+    def get_emitido_em(self, obj):
+        from django.utils import timezone
+        return timezone.now()
+
+
+
 class FiltroOpcaoSerializer(serializers.Serializer):
     value = serializers.JSONField()
     label = serializers.CharField()

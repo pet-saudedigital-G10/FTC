@@ -4,8 +4,14 @@ from .auth import (
     AdminTokenObtainPairView,
     AdminTokenRefreshView,
     AdminUserCreateView,
+    PacienteListView,
 )
-from .fila import EspecialidadeListView, FilaOpcoesView, RegistroFilaListView
+from .fila import (
+    EspecialidadeListView,
+    FilaOpcoesView,
+    RegistroFilaComprovanteView,
+    RegistroFilaListView,
+)
 
 __all__ = [
     'AdminLogoutView',
@@ -15,5 +21,9 @@ __all__ = [
     'AdminUserCreateView',
     'EspecialidadeListView',
     'FilaOpcoesView',
+    'PacienteListView',
+    'RegistroFilaComprovanteView',
     'RegistroFilaListView',
 ]
+
+

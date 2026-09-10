@@ -11,7 +11,8 @@ from rest_framework_simplejwt.serializers import (
 from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Paciente
+from ftc.models import Paciente
+
 
 ADMIN_AUTH_ERROR = 'Credenciais invalidas ou usuario sem permissao administrativa.'
 

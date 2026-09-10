@@ -3,7 +3,7 @@ import unicodedata
 from django.db.models import Q
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import ListAPIView
+from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -12,8 +12,10 @@ from ftc.models import Especialidade, PublicacaoFila, RegistroFila
 from ftc.serializers import (
     EspecialidadeSerializer,
     FilaOpcoesSerializer,
+    RegistroFilaComprovanteSerializer,
     RegistroFilaSerializer,
 )
+
 
 
 def normalizar(valor):
@@ -186,3 +188,23 @@ class FilaOpcoesView(APIView):
                 for value, label in RegistroFila.Prioridade.choices
             ],
         })
+
+
+class RegistroFilaComprovanteView(RetrieveAPIView):
+    serializer_class = RegistroFilaComprovanteSerializer
+    permission_classes = [AllowAny]
+    queryset = (
+        RegistroFila.objects
+        .filter(publicacao__status=PublicacaoFila.Status.PUBLICADA)
+        .select_related('publicacao', 'publicacao__especialidade')
+    )
+
+    @extend_schema(
+        tags=['Fila Publica'],
+        summary='Gerar comprovante de posicao da fila',
+        description='Retorna em formato JSON as informacoes detalhadas e o comprovante de posicao de um registro da fila.',
+        responses={200: RegistroFilaComprovanteSerializer},
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+

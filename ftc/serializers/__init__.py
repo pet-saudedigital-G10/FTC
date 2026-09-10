@@ -6,11 +6,13 @@ from .auth import (
     AdminTokenResponseSerializer,
     AdminUserCreateSerializer,
     AdminUserSerializer,
+    PacienteSerializer,
 )
 from .fila import (
     EspecialidadeSerializer,
     FilaOpcoesSerializer,
     FiltroOpcaoSerializer,
+    RegistroFilaComprovanteSerializer,
     RegistroFilaSerializer,
 )
 
@@ -25,5 +27,9 @@ __all__ = [
     'EspecialidadeSerializer',
     'FilaOpcoesSerializer',
     'FiltroOpcaoSerializer',
+    'PacienteSerializer',
+    'RegistroFilaComprovanteSerializer',
     'RegistroFilaSerializer',
 ]
+
+
