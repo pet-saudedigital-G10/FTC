@@ -8,7 +8,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ftc.models import Especialidade, PublicacaoFila, RegistroFila
+from ftc.models import Especialidade, Paciente, PublicacaoFila, RegistroFila
+from ftc.permissions import IsCitizen
 from ftc.serializers import (
     EspecialidadeSerializer,
     FilaOpcoesSerializer,
@@ -143,6 +144,30 @@ class RegistroFilaListView(ListAPIView):
                 description='Prioridade 1, 2 ou 3.',
             ),
         ],
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+
+class CidadaoRegistroFilaListView(ListAPIView):
+    serializer_class = RegistroFilaSerializer
+    permission_classes = [IsCitizen]
+
+    def get_queryset(self):
+        paciente = Paciente.objects.get(cpf=self.request.user.get_username())
+        return (
+            RegistroFila.objects
+            .filter(
+                paciente=paciente,
+                publicacao__status=PublicacaoFila.Status.PUBLICADA,
+            )
+            .select_related('publicacao', 'publicacao__especialidade')
+            .order_by('publicacao__especialidade__nome', 'posicao')
+        )
+
+    @extend_schema(
+        tags=['Cidadao'],
+        summary='Listar registros de fila do cidadao autenticado',
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)

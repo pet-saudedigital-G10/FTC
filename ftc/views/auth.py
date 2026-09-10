@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from ftc.permissions import IsSuperUser
+from ftc.permissions import IsCitizen, IsSuperUser
 from ftc.serializers import (
     AdminLogoutSerializer,
     AdminTokenObtainPairSerializer,
@@ -15,6 +15,12 @@ from ftc.serializers import (
     AdminTokenResponseSerializer,
     AdminUserCreateSerializer,
     AdminUserSerializer,
+    CidadaoTokenObtainPairSerializer,
+    CidadaoTokenRefreshResponseSerializer,
+    CidadaoTokenRefreshSerializer,
+    CidadaoTokenResponseSerializer,
+    CidadaoUserSerializer,
+    PacienteSerializer,
 )
 
 from ftc.models import Paciente
@@ -83,6 +89,24 @@ class AdminTokenObtainPairView(TokenObtainPairView):
         return super().post(request, *args, **kwargs)
 
 
+class CidadaoTokenObtainPairView(TokenObtainPairView):
+    permission_classes = [AllowAny]
+    serializer_class = CidadaoTokenObtainPairSerializer
+    throttle_scope = 'cidadao_login'
+
+    @extend_schema(
+        tags=['Cidadao Auth'],
+        summary='Login do cidadao',
+        description=(
+            'Autentica uma conta nao administrativa cujo username e o CPF de '
+            'um paciente cadastrado.'
+        ),
+        responses={status.HTTP_200_OK: CidadaoTokenResponseSerializer},
+    )
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
+
+
 class AdminTokenRefreshView(TokenRefreshView):
     permission_classes = [AllowAny]
     serializer_class = AdminTokenRefreshSerializer
@@ -93,6 +117,20 @@ class AdminTokenRefreshView(TokenRefreshView):
         summary='Renovar token administrativo',
         description='Renova o access token somente se o usuario continuar ativo e staff.',
         responses={status.HTTP_200_OK: AdminTokenRefreshResponseSerializer},
+    )
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
+
+
+class CidadaoTokenRefreshView(TokenRefreshView):
+    permission_classes = [AllowAny]
+    serializer_class = CidadaoTokenRefreshSerializer
+    throttle_scope = 'token_refresh'
+
+    @extend_schema(
+        tags=['Cidadao Auth'],
+        summary='Renovar token do cidadao',
+        responses={status.HTTP_200_OK: CidadaoTokenRefreshResponseSerializer},
     )
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, **kwargs)
@@ -113,7 +151,29 @@ class AdminLogoutView(APIView):
         },
     )
     def post(self, request):
-        serializer = AdminLogoutSerializer(data=request.data)
+        serializer = AdminLogoutSerializer(
+            data=request.data,
+            context={'request': request},
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CidadaoLogoutView(APIView):
+    permission_classes = [IsCitizen]
+
+    @extend_schema(
+        tags=['Cidadao Auth'],
+        summary='Logout do cidadao',
+        request=AdminLogoutSerializer,
+        responses={status.HTTP_204_NO_CONTENT: OpenApiResponse(description='Logout realizado.')},
+    )
+    def post(self, request):
+        serializer = AdminLogoutSerializer(
+            data=request.data,
+            context={'request': request},
+        )
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -129,3 +189,20 @@ class AdminMeView(APIView):
     )
     def get(self, request):
         return Response(AdminUserSerializer(request.user).data)
+
+
+class CidadaoMeView(APIView):
+    permission_classes = [IsCitizen]
+
+    @extend_schema(
+        tags=['Cidadao Auth'],
+        summary='Cidadao autenticado',
+        responses={status.HTTP_200_OK: CidadaoUserSerializer},
+    )
+    def get(self, request):
+        paciente = Paciente.objects.get(cpf=request.user.get_username())
+        return Response(CidadaoUserSerializer({
+            'id': request.user.pk,
+            'cpf': paciente.cpf,
+            'nome_completo': paciente.nome_completo,
+        }).data)

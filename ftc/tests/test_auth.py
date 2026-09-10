@@ -28,10 +28,24 @@ class PacienteViewTest(APITestCase):
             "***********2345"
         )
 
+        self.assertEqual(response.data[0]["cpf"], "")
+
         self.assertEqual(
             response.data[0]["nome_completo"],
             "T******* M****** M***"
         )
+
+    def test_mascara_cpf_e_aceita_cns_ausente(self):
+        Paciente.objects.create(
+            cpf="12345678901",
+            nome_completo="Paciente CPF",
+        )
+
+        response = self.client.get(reverse("pacientes"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data[0]["cpf"], "*******8901")
+        self.assertEqual(response.data[0]["cns"], "")
 
 class AdminAuthTests(APITestCase):
     def setUp(self):
@@ -107,6 +121,24 @@ class AdminAuthTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['username'], self.staff_user.username)
+
+    def test_django_session_is_not_accepted_by_api(self):
+        self.client.force_login(self.staff_user)
+
+        response = self.client.get(reverse('admin-me'))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_csrf_and_session_login_api_routes_were_removed(self):
+        csrf_response = self.client.get('/api/csrf/')
+        session_response = self.client.post(
+            '/api/admin/auth/session/login/',
+            {'username': self.staff_user.username, 'password': self.password},
+            format='json',
+        )
+
+        self.assertEqual(csrf_response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(session_response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_superuser_can_create_admin_without_email(self):
         self.client.force_authenticate(user=self.superuser)

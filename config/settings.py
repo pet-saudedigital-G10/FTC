@@ -57,8 +57,14 @@ ALLOWED_HOSTS = env_list(
     'ALLOWED_HOSTS',
     '127.0.0.1,localhost' if DEBUG else '',
 )
-CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS')
 
+# Allow explicit frontend origins to send JWT Authorization headers directly
+# when the Next.js same-origin proxy is not being used.
+LOCAL_FRONTEND_ORIGINS = 'http://localhost:3000,http://127.0.0.1:3000'
+CORS_ALLOWED_ORIGINS = env_list(
+    'CORS_ALLOWED_ORIGINS',
+    LOCAL_FRONTEND_ORIGINS if DEBUG else '',
+)
 
 # Application definition
 
@@ -69,6 +75,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'drf_spectacular',
@@ -77,6 +84,9 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    # Sessions and CSRF remain only for Django's built-in /admin/ interface.
+    # REST_FRAMEWORK below authenticates API requests exclusively with JWT.
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -166,7 +176,6 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
@@ -180,6 +189,7 @@ REST_FRAMEWORK = {
         'anon': os.getenv('DRF_ANON_THROTTLE_RATE', '100/hour'),
         'user': os.getenv('DRF_USER_THROTTLE_RATE', '1000/hour'),
         'admin_login': os.getenv('ADMIN_LOGIN_THROTTLE_RATE', '5/minute'),
+        'cidadao_login': os.getenv('CIDADAO_LOGIN_THROTTLE_RATE', '5/minute'),
         'token_refresh': os.getenv('TOKEN_REFRESH_THROTTLE_RATE', '10/minute'),
     },
 }
@@ -209,6 +219,8 @@ SPECTACULAR_SETTINGS = {
 SECURE_SSL_REDIRECT = env_bool('SECURE_SSL_REDIRECT', not DEBUG)
 SESSION_COOKIE_SECURE = env_bool('SESSION_COOKIE_SECURE', not DEBUG)
 CSRF_COOKIE_SECURE = env_bool('CSRF_COOKIE_SECURE', not DEBUG)
+SESSION_COOKIE_SAMESITE = os.getenv('SESSION_COOKIE_SAMESITE', 'Lax')
+CSRF_COOKIE_SAMESITE = os.getenv('CSRF_COOKIE_SAMESITE', 'Lax')
 SECURE_HSTS_SECONDS = int(
     os.getenv('SECURE_HSTS_SECONDS', '0' if DEBUG else '31536000')
 )

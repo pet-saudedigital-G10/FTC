@@ -150,6 +150,10 @@ Login administrativo para o dashboard da secretaria:
 
 POST http://127.0.0.1:8000/api/admin/auth/login/
 
+Este endpoint retorna JWT e **nao** e uma rota do Django Admin. A API aceita
+autenticacao exclusivamente pelo header `Authorization: Bearer <access_token>`;
+cookies e sessoes Django nao sao usados pelo frontend.
+
 Cadastro de usuario administrativo:
 
 POST http://127.0.0.1:8000/api/admin/users/
@@ -163,6 +167,24 @@ O usuario precisa estar ativo e com `is_staff=True`. Para invalidar refresh toke
 logout, rode as migrations depois de instalar as novas dependencias:
 
 python manage.py migrate
+
+### Acesso do cidadao
+
+O login do cidadao usa uma conta Django comum (`is_staff=False`) cujo `username`
+deve ser exatamente o CPF com 11 digitos de um registro existente em `Paciente`.
+Essa vinculacao impede que uma conta consulte filas de outro CPF.
+
+Endpoints usados pelo frontend:
+
+- `POST /api/auth/cidadao/login/`
+- `POST /api/auth/cidadao/refresh/`
+- `POST /api/auth/cidadao/logout/`
+- `GET /api/auth/cidadao/me/`
+- `GET /api/cidadao/filas/`
+
+A conta pode ser criada pelo Django Admin: informe o CPF sem pontuacao como nome
+de usuario, defina uma senha e mantenha as permissoes de equipe e superusuario
+desmarcadas. O paciente com esse CPF precisa existir antes do primeiro login.
 
 ---
 
