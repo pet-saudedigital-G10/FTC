@@ -2,19 +2,24 @@ import unicodedata
 
 from django.db.models import Q
 from drf_spectacular.utils import OpenApiParameter, extend_schema
+from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListAPIView
-from rest_framework.permissions import AllowAny
+from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from ftc.models import Especialidade, Paciente, PublicacaoFila, RegistroFila
 from ftc.permissions import IsCitizen
 from ftc.serializers import (
+    AtualizacaoFilaRespostaSerializer,
+    AtualizacaoFilaSerializer,
     EspecialidadeSerializer,
     FilaOpcoesSerializer,
     RegistroFilaSerializer,
 )
+from ftc.services import ErroImportacaoPDF, atualizar_fila_por_pdf
 
 
 def normalizar(valor):
@@ -211,3 +216,50 @@ class FilaOpcoesView(APIView):
                 for value, label in RegistroFila.Prioridade.choices
             ],
         })
+
+
+class AtualizacaoFilaView(APIView):
+    permission_classes = [IsAdminUser]
+    parser_classes = [MultiPartParser, FormParser]
+    throttle_scope = 'fila_importacao'
+
+    @extend_schema(
+        tags=['Administracao da Fila'],
+        summary='Substituir os registros publicados de uma fila por um PDF',
+        description=(
+            'Valida todo o PDF antes de publicar. A publicacao anterior da '
+            'especialidade e arquivada para auditoria e deixa de aparecer na '
+            'fila publica.'
+        ),
+        request=AtualizacaoFilaSerializer,
+        responses={201: AtualizacaoFilaRespostaSerializer},
+    )
+    def post(self, request):
+        serializer = AtualizacaoFilaSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        dados = serializer.validated_data
+
+        try:
+            resultado = atualizar_fila_por_pdf(
+                arquivo=dados['arquivo'],
+                especialidade=dados['especialidade'],
+                competencia=dados['competencia'],
+                observacao=dados.get('observacao', ''),
+                importado_por=request.user,
+            )
+        except ErroImportacaoPDF as exc:
+            raise ValidationError({'arquivo': [str(exc)]}) from exc
+
+        publicacao = resultado.publicacao
+        resposta = AtualizacaoFilaRespostaSerializer({
+            'publicacao_id': publicacao.pk,
+            'especialidade_id': publicacao.especialidade_id,
+            'competencia': publicacao.competencia,
+            'versao': publicacao.versao,
+            'status': publicacao.status,
+            'registros_importados': resultado.registros_importados,
+            'publicacoes_substituidas': resultado.publicacoes_substituidas,
+            'importado_em': publicacao.importado_em,
+            'publicada_em': publicacao.publicada_em,
+        })
+        return Response(resposta.data, status=status.HTTP_201_CREATED)

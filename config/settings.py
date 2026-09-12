@@ -171,6 +171,12 @@ STATIC_URL = 'static/'
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+FILA_PDF_MAX_SIZE_BYTES = int(
+    os.getenv('FILA_PDF_MAX_SIZE_MB', '10')
+) * 1024 * 1024
+FILA_PDF_MAX_PAGES = int(os.getenv('FILA_PDF_MAX_PAGES', '200'))
+FILA_PDF_MAX_RECORDS = int(os.getenv('FILA_PDF_MAX_RECORDS', '50000'))
+
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -190,6 +196,7 @@ REST_FRAMEWORK = {
         'admin_login': os.getenv('ADMIN_LOGIN_THROTTLE_RATE', '5/minute'),
         'cidadao_login': os.getenv('CIDADAO_LOGIN_THROTTLE_RATE', '5/minute'),
         'token_refresh': os.getenv('TOKEN_REFRESH_THROTTLE_RATE', '10/minute'),
+        'fila_importacao': os.getenv('FILA_IMPORT_THROTTLE_RATE', '10/hour'),
     },
 }
 

@@ -14,6 +14,8 @@ from .auth import (
     PacienteSerializer,
 )
 from .fila import (
+    AtualizacaoFilaRespostaSerializer,
+    AtualizacaoFilaSerializer,
     EspecialidadeSerializer,
     FilaOpcoesSerializer,
     FiltroOpcaoSerializer,
@@ -34,6 +36,8 @@ __all__ = [
     'CidadaoTokenResponseSerializer',
     'CidadaoUserSerializer',
     'PacienteSerializer',
+    'AtualizacaoFilaRespostaSerializer',
+    'AtualizacaoFilaSerializer',
     'EspecialidadeSerializer',
     'FilaOpcoesSerializer',
     'FiltroOpcaoSerializer',

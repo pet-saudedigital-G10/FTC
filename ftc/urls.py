@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    AtualizacaoFilaView,
     AdminLogoutView,
     AdminMeView,
     AdminTokenObtainPairView,
@@ -18,6 +19,11 @@ from .views import (
 )
 
 urlpatterns = [
+    path(
+        'admin/filas/atualizar/',
+        AtualizacaoFilaView.as_view(),
+        name='admin-fila-atualizar',
+    ),
     path('admin/users/', AdminUserCreateView.as_view(), name='admin-user-create'),
     path('admin/auth/login/', AdminTokenObtainPairView.as_view(), name='admin-login'),
     path(

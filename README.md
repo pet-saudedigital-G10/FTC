@@ -168,6 +168,42 @@ logout, rode as migrations depois de instalar as novas dependencias:
 
 python manage.py migrate
 
+### Atualizacao administrativa da fila por PDF
+
+Funcionarios autenticados com `is_staff=True` podem substituir a fila publicada:
+
+`POST /api/admin/filas/atualizar/`
+
+A requisicao usa `multipart/form-data` e recebe:
+
+- `arquivo`: PDF da lista de regulacao;
+- `especialidade`: ID de uma especialidade ativa;
+- `competencia`: mes no formato `AAAA-MM`;
+- `observacao`: texto opcional para auditoria.
+
+Exemplo:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/admin/filas/atualizar/ \
+  -H "Authorization: Bearer <access_token>" \
+  -F "arquivo=@fila-pediatria.pdf;type=application/pdf" \
+  -F "especialidade=1" \
+  -F "competencia=2026-04" \
+  -F "observacao=Atualizacao mensal"
+```
+
+O importador exige a tabela com data da solicitacao, nome do usuario, ano de
+nascimento, CNS, sexo, codigo da solicitacao e posicao. O titulo do relatorio deve
+corresponder ao tipo e ao nome da especialidade selecionada. Nomes e CNS sao
+mascarados novamente pela API antes da publicacao.
+
+O PDF inteiro e validado antes de qualquer troca. Em caso de sucesso, a publicacao
+anterior da especialidade passa para `ARQUIVADA`, a nova passa para `PUBLICADA` e
+somente os novos registros aparecem na API publica. A versao arquivada permanece no
+banco para auditoria. PDF invalido, duplicado ou uma falha de gravacao nao altera a
+fila vigente. Os registros publicos incluem `publicada_em`, que informa a data e a
+hora da ultima atualizacao visivel.
+
 ### Acesso do cidadao
 
 O login do cidadao usa uma conta Django comum (`is_staff=False`) cujo `username`
