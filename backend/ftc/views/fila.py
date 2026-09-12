@@ -12,14 +12,35 @@ from rest_framework.views import APIView
 
 from ftc.models import Especialidade, Paciente, PublicacaoFila, RegistroFila
 from ftc.permissions import IsCitizen
+from ftc.selectors import get_posicoes_paciente_ativas
 from ftc.serializers import (
     AtualizacaoFilaRespostaSerializer,
     AtualizacaoFilaSerializer,
     EspecialidadeSerializer,
     FilaOpcoesSerializer,
     RegistroFilaSerializer,
+    RegistroFilaPublicSerializer,
 )
 from ftc.services import ErroImportacaoPDF, atualizar_fila_por_pdf
+
+
+class ConsultaPosicaoFilaAPIView(APIView):
+    def post(self, request):
+        cpf = request.data.get('cpf')
+
+        if not isinstance(cpf, str) or len(cpf) != 11 or not cpf.isdigit():
+            return Response(
+                {'erro': 'CPF inválido ou não informado.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        registros = get_posicoes_paciente_ativas(cpf=cpf)
+        serializer = RegistroFilaPublicSerializer(registros, many=True)
+
+        return Response({
+            'encontrado': registros.exists(),
+            'filas': serializer.data,
+        }, status=status.HTTP_200_OK)
 
 
 def normalizar(valor):

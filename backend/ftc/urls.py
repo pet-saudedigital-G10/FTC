@@ -12,6 +12,7 @@ from .views import (
     CidadaoRegistroFilaListView,
     CidadaoTokenObtainPairView,
     CidadaoTokenRefreshView,
+    ConsultaPosicaoFilaAPIView,
     EspecialidadeListView,
     FilaOpcoesView,
     RegistroFilaListView,
@@ -24,6 +25,7 @@ urlpatterns = [
         AtualizacaoFilaView.as_view(),
         name='admin-fila-atualizar',
     ),
+    path('consultar/', ConsultaPosicaoFilaAPIView.as_view(), name='consulta-fila'),
     path('admin/users/', AdminUserCreateView.as_view(), name='admin-user-create'),
     path('admin/auth/login/', AdminTokenObtainPairView.as_view(), name='admin-login'),
     path(

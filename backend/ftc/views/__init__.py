@@ -13,6 +13,7 @@ from .auth import (
 from .fila import (
     AtualizacaoFilaView,
     CidadaoRegistroFilaListView,
+    ConsultaPosicaoFilaAPIView,
     EspecialidadeListView,
     FilaOpcoesView,
     RegistroFilaListView,
@@ -30,6 +31,7 @@ __all__ = [
     'CidadaoTokenObtainPairView',
     'CidadaoTokenRefreshView',
     'CidadaoRegistroFilaListView',
+    'ConsultaPosicaoFilaAPIView',
     'AtualizacaoFilaView',
     'EspecialidadeListView',
     'FilaOpcoesView',

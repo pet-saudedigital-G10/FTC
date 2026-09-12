@@ -6,6 +6,28 @@ from rest_framework import serializers
 from ftc.models import Especialidade, PublicacaoFila, RegistroFila
 
 
+class RegistroFilaPublicSerializer(serializers.ModelSerializer):
+
+    especialidade = serializers.CharField(source='publicacao.especialidade.nome')
+    tipo_especialidade = serializers.CharField(source='publicacao.especialidade.get_tipo_display')
+    competencia = serializers.DateField(source='publicacao.competencia')
+
+    nome_paciente = serializers.CharField(source='paciente.nome_completo')
+
+    class Meta:
+        model = RegistroFila
+        fields = [
+            'posicao',
+            'prioridade',
+            'situacao',
+            'especialidade',
+            'tipo_especialidade',
+            'competencia',
+            'nome_paciente',
+            'data_solicitacao',
+        ]
+
+
 class EspecialidadeSerializer(serializers.ModelSerializer):
     tipo_display = serializers.CharField(source='get_tipo_display', read_only=True)
 

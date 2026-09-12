@@ -20,6 +20,7 @@ from .fila import (
     FilaOpcoesSerializer,
     FiltroOpcaoSerializer,
     RegistroFilaSerializer,
+    RegistroFilaPublicSerializer,
 )
 
 __all__ = [
@@ -42,4 +43,5 @@ __all__ = [
     'FilaOpcoesSerializer',
     'FiltroOpcaoSerializer',
     'RegistroFilaSerializer',
+    'RegistroFilaPublicSerializer',
 ]
