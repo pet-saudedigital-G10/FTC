@@ -5,6 +5,7 @@ from django.db import IntegrityError, transaction
 from django.test import TestCase
 
 from ftc.models import Especialidade, Paciente, PublicacaoFila, RegistroFila
+from ftc.utils.masking import mask_cns, mask_name
 
 
 class FilaModelsTests(TestCase):
@@ -72,15 +73,19 @@ class FilaModelsTests(TestCase):
         })
 
     def test_registro_preserva_retrato_publico_da_fila(self):
-        paciente = Paciente.objects.create(cpf='12345678901')
+        paciente = Paciente.objects.create(
+            cpf='12345678901',
+            cns='700123456787953',
+            nome_completo='Nome Longo Da Silva',
+        )
         publicacao = self.criar_publicacao()
         registro = RegistroFila.objects.create(
             publicacao=publicacao,
             paciente=paciente,
             data_solicitacao=date(2026, 4, 6),
-            nome_mascarado='N.L.D.C.R.',
+            nome_mascarado=mask_name(paciente.nome_completo),
             ano_nascimento=2024,
-            cns_mascarado='700********7953',
+            cns_mascarado=mask_cns(paciente.cns),
             sexo=Paciente.Sexo.MASCULINO,
             codigo_solicitacao='660399858',
             posicao=1,
@@ -91,7 +96,8 @@ class FilaModelsTests(TestCase):
 
         self.assertEqual(registro.publicacao.especialidade, self.pediatria)
         self.assertEqual(registro.paciente, paciente)
-        self.assertEqual(registro.cns_mascarado, '700********7953')
+        self.assertEqual(registro.cns_mascarado, mask_cns(paciente.cns))
+        self.assertEqual(registro.nome_mascarado, mask_name(paciente.nome_completo))
         self.assertEqual(registro.prioridade, RegistroFila.Prioridade.NIVEL_1)
         self.assertEqual(registro.tipo, RegistroFila.Tipo.SOLICITADAS)
         self.assertEqual(registro.situacao, RegistroFila.Situacao.SOLICITADO)
@@ -101,11 +107,12 @@ class FilaModelsTests(TestCase):
         dados = {
             'publicacao': publicacao,
             'data_solicitacao': date(2026, 4, 6),
-            'nome_mascarado': 'N.L.D.C.R.',
+            'nome_mascarado': mask_name('Nome Longo Da Silva'),
             'codigo_solicitacao': '660399858',
             'posicao': 1,
         }
         RegistroFila.objects.create(**dados)
+
 
         with self.assertRaises(IntegrityError), transaction.atomic():
             RegistroFila.objects.create(**dados)

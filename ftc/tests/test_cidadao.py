@@ -7,6 +7,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from ftc.models import Especialidade, Paciente, PublicacaoFila, RegistroFila
+from ftc.utils.masking import mask_cpf, mask_name
 
 
 class CidadaoAuthTests(APITestCase):
@@ -58,11 +59,12 @@ class CidadaoAuthTests(APITestCase):
             publicacao=publicacao,
             paciente=paciente,
             data_solicitacao=date(2026, 8, 10),
-            nome_mascarado='C.T.',
-            cpf_mascarado=f'{paciente.cpf[:3]}.***.***-{paciente.cpf[-2:]}',
+            nome_mascarado=mask_name(paciente.nome_completo),
+            cpf_mascarado=mask_cpf(paciente.cpf),
             codigo_solicitacao=codigo,
             posicao=posicao,
         )
+
 
     def _login(self, cpf=None):
         return self.client.post(
