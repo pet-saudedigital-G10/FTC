@@ -1,226 +1,305 @@
-# FTC Backend - Fila Transparente Cidadã
+# FTC — Fila Transparente Cidadã
 
-Backend do projeto **Fila Transparente Cidadã**, desenvolvido com **Django** e **Django REST Framework**.
+Aplicação para consulta e administração de filas de regulação em saúde.
 
-Este guia explica como configurar o ambiente local após clonar o repositório.
+Este repositório é um monorepo composto por:
 
----
+- `backend/`: API desenvolvida com Django e Django REST Framework;
+- `frontend/`: aplicação web desenvolvida com Next.js.
 
-## Requisitos necessários
+## Estrutura do projeto
 
-Antes de começar, verifique se você tem instalado:
+```text
+.
+├── backend/
+│   ├── config/            # Configurações do Django
+│   ├── ftc/               # Aplicação, modelos, serviços, rotas e testes
+│   ├── .env.example       # Exemplo das variáveis do backend
+│   ├── manage.py
+│   └── requirements.txt
+├── frontend/
+│   ├── public/            # Arquivos estáticos
+│   ├── src/               # Páginas, componentes e integração com a API
+│   ├── .env.example       # Exemplo das variáveis do frontend
+│   └── package.json
+└── README.md
+```
 
-- Python 3.10 ou superior
-- Git
-- VS Code ou outro editor de código
-- PostgreSQL, caso o projeto já esteja configurado para usar banco local
+## Requisitos
 
-Para verificar se o Python está instalado:
+Antes de começar, instale:
 
-python --version
+- Git;
+- Python 3.10 ou superior;
+- Node.js e npm;
+- PostgreSQL, caso o backend esteja configurado para usar um banco local.
 
-ou:
+## Clonando o repositório
 
-py --version
-
----
-
-## 1. Clonar o repositório
-
-No terminal, execute:
-
+```bash
 git clone URL_DO_REPOSITORIO
+cd NOME_DO_REPOSITORIO
+```
 
-Depois entre na pasta do projeto:
+## Configurando o backend
 
-cd NOME_DA_PASTA_DO_REPOSITORIO
+Entre na pasta do backend:
 
----
+```bash
+cd backend
+```
 
-## 2. Criar o ambiente virtual
+Crie um ambiente virtual:
 
-Dentro da pasta do projeto, crie um ambiente virtual:
-
+```bash
 python -m venv venv
+```
 
-Caso o comando acima não funcione no Windows, tente:
+No Windows PowerShell, ative-o com:
 
-py -m venv venv
-
----
-
-## 3. Ativar o ambiente virtual
-
-No Windows PowerShell:
-
+```powershell
 .\venv\Scripts\Activate.ps1
+```
 
-Caso apareça erro de permissão, execute:
+Se o PowerShell bloquear a ativação, permita a execução somente na sessão atual e
+tente novamente:
 
+```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-
-Depois tente ativar novamente:
-
 .\venv\Scripts\Activate.ps1
+```
 
-Se estiver usando Git Bash:
+No Git Bash:
 
+```bash
 source venv/Scripts/activate
+```
 
-No Linux/Mac:
+No Linux ou macOS:
 
+```bash
 source venv/bin/activate
+```
 
-Quando o ambiente virtual estiver ativo, aparecerá algo parecido com isto no terminal:
+Instale as dependências:
 
-(venv)
-
----
-
-## 4. Instalar as dependências
-
-Com o ambiente virtual ativo, instale as dependências do projeto:
-
+```bash
 pip install -r requirements.txt
+```
 
----
+Crie o arquivo local de variáveis de ambiente a partir do exemplo:
 
-## 5. Configurar variáveis de ambiente
+```powershell
+Copy-Item .env.example .env
+```
 
-Crie um arquivo chamado `.env` na raiz do projeto.
+No Linux ou macOS:
+
+```bash
+cp .env.example .env
+```
+
+Revise o `.env` e informe, principalmente, a chave secreta e os dados de conexão
+com o banco. O arquivo contém também as configurações de CORS, limites de requisição,
+tokens JWT, importação de PDF e segurança.
+
+Execute as migrations:
+
+```bash
+python manage.py migrate
+```
+
+Se precisar acessar o painel administrativo, crie um superusuário:
+
+```bash
+python manage.py createsuperuser
+```
+
+Inicie a API:
+
+```bash
+python manage.py runserver
+```
+
+O backend ficará disponível em:
+
+- API: <http://127.0.0.1:8000/>;
+- Django Admin: <http://127.0.0.1:8000/admin/>;
+- Swagger: <http://127.0.0.1:8000/api/docs/>;
+- Redoc: <http://127.0.0.1:8000/api/redoc/>.
+
+## Configurando o frontend
+
+Em outro terminal, partindo da raiz do repositório, entre na pasta do frontend:
+
+```bash
+cd frontend
+```
+
+Instale as dependências:
+
+```bash
+npm install
+```
+
+Crie o arquivo local de variáveis de ambiente:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+No Linux ou macOS:
+
+```bash
+cp .env.example .env
+```
+
+Por padrão, o frontend espera encontrar o Django em:
+
+```env
+DJANGO_API_URL=http://localhost:8000
+```
+
+Inicie o servidor de desenvolvimento:
+
+```bash
+npm run dev
+```
+
+A aplicação ficará disponível em <http://localhost:3000/>.
+
+As chamadas feitas pelo navegador usam o proxy de mesma origem
+`/api/backend/*`. Por isso, os caminhos declarados em
+`frontend/src/lib/api-routes.ts` devem conter o prefixo completo `/api/` das
+rotas do Django. O cliente mantém os tokens de acesso e atualização, renova a
+sessão após respostas `401` e invalida o refresh token no logout.
+
+## Autenticação administrativa
+
+O login administrativo utilizado pelo frontend é feito pela API:
+
+```text
+POST /api/admin/auth/login/
+```
+
+Esse endpoint retorna tokens JWT e não corresponde ao login do Django Admin. A
+API espera o token no cabeçalho `Authorization: Bearer <access_token>`; cookies e
+sessões do Django não são usados pelo frontend.
+
+O cadastro de usuários administrativos é feito em:
+
+```text
+POST /api/admin/users/
+```
+
+O primeiro superusuário deve ser criado com `python manage.py createsuperuser`.
+Depois disso, somente um superusuário autenticado pode cadastrar outros usuários
+administrativos pela API. O cadastro exige `username` e `password`; `email`,
+`first_name` e `last_name` são opcionais. O usuário deve estar ativo e possuir
+`is_staff=True`.
+
+## Atualização administrativa da fila por PDF
+
+Funcionários autenticados com `is_staff=True` podem substituir a fila publicada:
+
+```text
+POST /api/admin/filas/atualizar/
+```
+
+A requisição usa `multipart/form-data` e recebe:
+
+- `arquivo`: PDF da lista de regulação;
+- `especialidade`: ID de uma especialidade ativa;
+- `competencia`: mês no formato `AAAA-MM`;
+- `observacao`: texto opcional para auditoria.
 
 Exemplo:
 
-DEBUG=True
-SECRET_KEY=sua_chave_secreta_aqui
+```bash
+curl -X POST http://127.0.0.1:8000/api/admin/filas/atualizar/ \
+  -H "Authorization: Bearer <access_token>" \
+  -F "arquivo=@fila-pediatria.pdf;type=application/pdf" \
+  -F "especialidade=1" \
+  -F "competencia=2026-04" \
+  -F "observacao=Atualizacao mensal"
+```
 
-DB_NAME=ftc_db
-DB_USER=postgres
-DB_PASSWORD=sua_senha
-DB_HOST=localhost
-DB_PORT=5432
+O importador exige uma tabela com data da solicitação, nome do usuário, ano de
+nascimento, CNS, sexo, código da solicitação e posição. O título do relatório
+deve corresponder ao tipo e ao nome da especialidade selecionada. Nomes e CNS são
+mascarados novamente pela API antes da publicação.
 
-Atenção: o arquivo `.env` não deve ser enviado para o GitHub.
+O PDF inteiro é validado antes de qualquer troca. Em caso de sucesso, a publicação
+anterior da especialidade passa para `ARQUIVADA`, a nova passa para `PUBLICADA` e
+somente os novos registros aparecem na API pública. A versão arquivada permanece
+no banco para auditoria. Um PDF inválido ou duplicado, ou uma falha de gravação,
+não altera a fila vigente.
 
-Cada membro da equipe deve criar o próprio `.env` localmente.
+## Acesso do cidadão
 
----
+O login do cidadão usa uma conta Django comum, com `is_staff=False`, cujo
+`username` deve ser exatamente o CPF com 11 dígitos de um registro existente em
+`Paciente`. Essa vinculação impede que uma conta consulte filas de outro CPF.
 
-## 6. Rodar as migrations
+Endpoints utilizados pelo frontend:
 
-Depois de instalar as dependências e configurar o banco, execute:
+- `POST /api/auth/cidadao/login/`;
+- `POST /api/auth/cidadao/refresh/`;
+- `POST /api/auth/cidadao/logout/`;
+- `GET /api/auth/cidadao/me/`;
+- `GET /api/cidadao/filas/`.
 
-python manage.py migrate
+A conta pode ser criada pelo Django Admin. Informe o CPF sem pontuação como nome
+de usuário, defina uma senha e mantenha as permissões de equipe e superusuário
+desmarcadas. O paciente com esse CPF deve existir antes do primeiro login.
 
----
+## Testes e verificações
 
-## 7. Criar um superusuário
+Para verificar o backend:
 
-Para acessar o painel administrativo do Django, crie um superusuário:
+```bash
+cd backend
+python manage.py check
+python manage.py test
+```
 
-python manage.py createsuperuser
+Para verificar o frontend:
 
-Informe usuário, e-mail e senha quando solicitado.
+```bash
+cd frontend
+npm run lint
+npm run build
+```
 
----
+## Atualizando dependências
 
-## 8. Rodar o servidor local
+Ao adicionar uma dependência Python, atualize o arquivo do backend:
 
-Execute:
-
-python manage.py runserver
-
-O servidor ficará disponível em:
-
-http://127.0.0.1:8000/
-
-O painel administrativo do Django fica em:
-
-http://127.0.0.1:8000/admin/
-
-Swagger da API:
-
-http://127.0.0.1:8000/api/docs/
-
-Redoc da API:
-
-http://127.0.0.1:8000/api/redoc/
-
-Login administrativo para o dashboard da secretaria:
-
-POST http://127.0.0.1:8000/api/admin/auth/login/
-
-Este endpoint retorna JWT e **nao** e uma rota do Django Admin. A API aceita
-autenticacao exclusivamente pelo header `Authorization: Bearer <access_token>`;
-cookies e sessoes Django nao sao usados pelo frontend.
-
-Cadastro de usuario administrativo:
-
-POST http://127.0.0.1:8000/api/admin/users/
-
-O primeiro superusuario deve ser criado com `python manage.py createsuperuser`.
-Depois disso, somente um superusuario autenticado pode cadastrar outros usuarios
-administrativos pela API. O cadastro exige `username` e `password`; `email`,
-`first_name` e `last_name` sao opcionais.
-
-O usuario precisa estar ativo e com `is_staff=True`. Para invalidar refresh tokens no
-logout, rode as migrations depois de instalar as novas dependencias:
-
-python manage.py migrate
-
-### Acesso do cidadao
-
-O login do cidadao usa uma conta Django comum (`is_staff=False`) cujo `username`
-deve ser exatamente o CPF com 11 digitos de um registro existente em `Paciente`.
-Essa vinculacao impede que uma conta consulte filas de outro CPF.
-
-Endpoints usados pelo frontend:
-
-- `POST /api/auth/cidadao/login/`
-- `POST /api/auth/cidadao/refresh/`
-- `POST /api/auth/cidadao/logout/`
-- `GET /api/auth/cidadao/me/`
-- `GET /api/cidadao/filas/`
-
-A conta pode ser criada pelo Django Admin: informe o CPF sem pontuacao como nome
-de usuario, defina uma senha e mantenha as permissoes de equipe e superusuario
-desmarcadas. O paciente com esse CPF precisa existir antes do primeiro login.
-
----
-
-## 9. Atualizar dependências
-
-Sempre que alguém instalar uma nova biblioteca no projeto, deve atualizar o arquivo `requirements.txt` com:
-
+```bash
+cd backend
 pip freeze > requirements.txt
+```
 
-Depois disso, o arquivo deve ser commitado no Git.
+As dependências do frontend devem ser instaladas com `npm install`, mantendo
+`package.json` e `package-lock.json` versionados.
 
-Quando outro membro da equipe puxar atualizações do repositório, deve rodar novamente:
+## Fluxo de desenvolvimento
 
-pip install -r requirements.txt
+Execute os comandos Git na raiz do monorepo. Antes de começar:
 
----
-
-## Fluxo recomendado para trabalhar no projeto
-
-Antes de começar a codar:
-
+```bash
 git pull
+```
 
-Depois de fazer alterações:
+Depois das alterações:
 
+```bash
 git status
 git add .
 git commit -m "descrição da alteração"
 git push
+```
 
----
-
-## Observações importantes
-
-- Sempre ativar o ambiente virtual antes de rodar comandos do Django.
-- Não enviar a pasta `venv` para o GitHub.
-- Não enviar o arquivo `.env` para o GitHub.
-- Manter o `requirements.txt` atualizado.
-- Antes de criar novas funcionalidades, verificar se a branch local está atualizada.
+Não envie ao repositório arquivos `.env`, ambientes virtuais, bancos locais,
+`node_modules` ou artefatos de build. Os arquivos `.gitignore` dentro de
+`backend/` e `frontend/` protegem esses conteúdos em seus respectivos projetos.
