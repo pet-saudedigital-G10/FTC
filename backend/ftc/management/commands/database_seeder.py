@@ -10,6 +10,10 @@ from ftc.models import Especialidade, Paciente, PublicacaoFila, RegistroFila
 
 
 COMPETENCIA_SEED = date(2026, 6, 1)
+ADMIN_USERNAME_SEED = 'servidor.saude'
+ADMIN_PASSWORD_SEED = 'SenhaForte123!'
+CIDADAO_CPF_SEED = '10000000001'
+CIDADAO_PASSWORD_SEED = 'SenhaCidadao123!'
 
 
 class Command(BaseCommand):
@@ -21,6 +25,10 @@ class Command(BaseCommand):
             action='store_true',
             help='Remove somente registros criados por este seeder antes de recriar.',
         )
+        parser.add_argument('--admin-username', default=ADMIN_USERNAME_SEED)
+        parser.add_argument('--admin-password', default=ADMIN_PASSWORD_SEED)
+        parser.add_argument('--cidadao-cpf', default=CIDADAO_CPF_SEED)
+        parser.add_argument('--cidadao-password', default=CIDADAO_PASSWORD_SEED)
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -36,6 +44,7 @@ class Command(BaseCommand):
 
         especialidades = self.criar_especialidades()
         pacientes = self.criar_pacientes()
+        admin, cidadao = self.criar_usuarios(pacientes, options)
         publicacoes = {
             slug: self.criar_publicacao(especialidade, importado_por)
             for slug, especialidade in especialidades.items()
@@ -45,6 +54,8 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('Seeder executado com sucesso.'))
         self.stdout.write(f'Especialidades disponiveis: {len(especialidades)}')
         self.stdout.write(f'Pacientes de exemplo: {len(pacientes)}')
+        self.stdout.write(f'Usuario administrativo: {admin.username}')
+        self.stdout.write(f'Usuario cidadao: {cidadao.username}')
         self.stdout.write(f'Publicacoes de exemplo: {len(publicacoes)}')
         self.stdout.write(f'Registros de fila criados/atualizados: {registros}')
 
@@ -96,6 +107,39 @@ class Command(BaseCommand):
             )
             pacientes.append(paciente)
         return pacientes
+
+    def criar_usuarios(self, pacientes, options):
+        User = get_user_model()
+
+        admin, _ = User.objects.get_or_create(
+            username=options['admin_username'],
+        )
+        admin.is_active = True
+        admin.is_staff = True
+        admin.set_password(options['admin_password'])
+        admin.save(update_fields=['is_active', 'is_staff', 'password'])
+
+        paciente_por_cpf = {paciente.cpf: paciente for paciente in pacientes}
+        cpf_cidadao = options['cidadao_cpf']
+        if cpf_cidadao not in paciente_por_cpf:
+            self.stderr.write(
+                self.style.WARNING(
+                    f'O CPF {cpf_cidadao} nao pertence aos pacientes do seeder; '
+                    f'usando {CIDADAO_CPF_SEED}.'
+                )
+            )
+            cpf_cidadao = CIDADAO_CPF_SEED
+
+        cidadao, _ = User.objects.get_or_create(username=cpf_cidadao)
+        cidadao.is_active = True
+        cidadao.is_staff = False
+        cidadao.is_superuser = False
+        cidadao.set_password(options['cidadao_password'])
+        cidadao.save(
+            update_fields=['is_active', 'is_staff', 'is_superuser', 'password'],
+        )
+
+        return admin, cidadao
 
     def criar_publicacao(self, especialidade, importado_por):
         hash_arquivo = hashlib.sha256(

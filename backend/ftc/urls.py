@@ -12,6 +12,7 @@ from .views import (
     CidadaoRegistroFilaListView,
     CidadaoTokenObtainPairView,
     CidadaoTokenRefreshView,
+    CidadaoUserCreateView,
     ConsultaPosicaoFilaAPIView,
     EspecialidadeListView,
     FilaOpcoesView,
@@ -35,6 +36,11 @@ urlpatterns = [
     ),
     path('admin/auth/logout/', AdminLogoutView.as_view(), name='admin-logout'),
     path('admin/auth/me/', AdminMeView.as_view(), name='admin-me'),
+    path(
+        'auth/cidadao/register/',
+        CidadaoUserCreateView.as_view(),
+        name='cidadao-register',
+    ),
     path(
         'auth/cidadao/login/',
         CidadaoTokenObtainPairView.as_view(),

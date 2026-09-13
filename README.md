@@ -174,6 +174,32 @@ As chamadas feitas pelo navegador usam o proxy de mesma origem
 rotas do Django. O cliente mantém os tokens de acesso e atualização, renova a
 sessão após respostas `401` e invalida o refresh token no logout.
 
+## Dados de desenvolvimento
+
+O seeder cria dados de fila e duas contas de desenvolvimento:
+
+```powershell
+cd backend
+python manage.py database_seeder
+```
+
+- administrador: `servidor.saude` / `SenhaForte123!`;
+- cidadão: `10000000001` / `SenhaCidadao123!`;
+- CNS do cidadão de exemplo: `700000000000001`.
+
+As contas são criadas ou atualizadas de forma idempotente. As credenciais podem
+ser substituídas sem editar código:
+
+```powershell
+python manage.py database_seeder `
+  --admin-username outro.admin `
+  --admin-password OutraSenhaForte123! `
+  --cidadao-cpf 10000000002 `
+  --cidadao-password OutraSenhaCidadao123!
+```
+
+Essas credenciais destinam-se somente ao ambiente de desenvolvimento.
+
 ## Autenticação administrativa
 
 O login administrativo utilizado pelo frontend é feito pela API:
@@ -243,15 +269,27 @@ O login do cidadão usa uma conta Django comum, com `is_staff=False`, cujo
 
 Endpoints utilizados pelo frontend:
 
+- `POST /api/auth/cidadao/register/`;
 - `POST /api/auth/cidadao/login/`;
 - `POST /api/auth/cidadao/refresh/`;
 - `POST /api/auth/cidadao/logout/`;
 - `GET /api/auth/cidadao/me/`;
 - `GET /api/cidadao/filas/`.
 
-A conta pode ser criada pelo Django Admin. Informe o CPF sem pontuação como nome
-de usuário, defina uma senha e mantenha as permissões de equipe e superusuário
-desmarcadas. O paciente com esse CPF deve existir antes do primeiro login.
+A conta pode ser criada pela API depois que o paciente já existir. O CPF e o CNS
+devem ser enviados sem pontuação e corresponder ao mesmo paciente:
+
+```json
+{
+  "cpf": "10000000001",
+  "cns": "700000000000001",
+  "password": "NovaSenhaCidadao123!",
+  "password_confirmation": "NovaSenhaCidadao123!"
+}
+```
+
+O endpoint cria somente contas comuns (`is_staff=False`). Contas administrativas
+continuam sendo cadastradas por um superusuário em `POST /api/admin/users/`.
 
 ## Testes e verificações
 

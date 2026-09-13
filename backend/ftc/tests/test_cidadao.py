@@ -155,3 +155,72 @@ class CidadaoAuthTests(APITestCase):
 
         self.assertEqual(logout_response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(refresh_response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class CidadaoRegistrationTests(APITestCase):
+    def setUp(self):
+        cache.clear()
+        self.cpf = '11122233344'
+        self.cns = '700000000000099'
+        self.password = 'NovaSenhaCidadao123!'
+        self.paciente = Paciente.objects.create(
+            cpf=self.cpf,
+            cns=self.cns,
+            nome_completo='Cidada Cadastro',
+        )
+
+    def registrar(self, **overrides):
+        payload = {
+            'cpf': self.cpf,
+            'cns': self.cns,
+            'password': self.password,
+            'password_confirmation': self.password,
+        }
+        payload.update(overrides)
+        return self.client.post(
+            reverse('cidadao-register'),
+            payload,
+            format='json',
+        )
+
+    def test_cidadao_pode_se_cadastrar_e_entrar(self):
+        cadastro = self.registrar()
+
+        self.assertEqual(cadastro.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(cadastro.data['cpf'], self.cpf)
+        self.assertEqual(cadastro.data['nome_completo'], 'Cidada Cadastro')
+
+        user = get_user_model().objects.get(username=self.cpf)
+        self.assertTrue(user.is_active)
+        self.assertFalse(user.is_staff)
+        self.assertFalse(user.is_superuser)
+        self.assertTrue(user.check_password(self.password))
+
+        login = self.client.post(
+            reverse('cidadao-login'),
+            {'username': self.cpf, 'password': self.password},
+            format='json',
+        )
+        self.assertEqual(login.status_code, status.HTTP_200_OK)
+
+    def test_cadastro_rejeita_cns_que_nao_corresponde_ao_cpf(self):
+        response = self.registrar(cns='700000000000098')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(
+            get_user_model().objects.filter(username=self.cpf).exists()
+        )
+
+    def test_cadastro_rejeita_senhas_diferentes(self):
+        response = self.registrar(password_confirmation='OutraSenha123!')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('password_confirmation', response.data)
+
+    def test_cadastro_rejeita_conta_duplicada(self):
+        primeira = self.registrar()
+        segunda = self.registrar()
+
+        self.assertEqual(primeira.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(segunda.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('cpf', segunda.data)

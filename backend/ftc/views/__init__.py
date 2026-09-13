@@ -9,6 +9,7 @@ from .auth import (
     CidadaoMeView,
     CidadaoTokenObtainPairView,
     CidadaoTokenRefreshView,
+    CidadaoUserCreateView,
 )
 from .fila import (
     AtualizacaoFilaView,
@@ -30,6 +31,7 @@ __all__ = [
     'CidadaoMeView',
     'CidadaoTokenObtainPairView',
     'CidadaoTokenRefreshView',
+    'CidadaoUserCreateView',
     'CidadaoRegistroFilaListView',
     'ConsultaPosicaoFilaAPIView',
     'AtualizacaoFilaView',

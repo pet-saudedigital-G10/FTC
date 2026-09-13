@@ -21,6 +21,9 @@ export const apiRoutes = {
 
   cidadaoLogin:
     process.env.NEXT_PUBLIC_CIDADAO_LOGIN_PATH ?? "/api/auth/cidadao/login/",
+  cidadaoRegister:
+    process.env.NEXT_PUBLIC_CIDADAO_REGISTER_PATH ??
+    "/api/auth/cidadao/register/",
   cidadaoRefresh:
     process.env.NEXT_PUBLIC_CIDADAO_REFRESH_PATH ??
     "/api/auth/cidadao/refresh/",

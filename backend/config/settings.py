@@ -195,6 +195,10 @@ REST_FRAMEWORK = {
         'user': os.getenv('DRF_USER_THROTTLE_RATE', '1000/hour'),
         'admin_login': os.getenv('ADMIN_LOGIN_THROTTLE_RATE', '5/minute'),
         'cidadao_login': os.getenv('CIDADAO_LOGIN_THROTTLE_RATE', '5/minute'),
+        'cidadao_registration': os.getenv(
+            'CIDADAO_REGISTRATION_THROTTLE_RATE',
+            '5/hour',
+        ),
         'token_refresh': os.getenv('TOKEN_REFRESH_THROTTLE_RATE', '10/minute'),
         'fila_importacao': os.getenv('FILA_IMPORT_THROTTLE_RATE', '10/hour'),
     },
