@@ -12,6 +12,7 @@ from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from ftc.models import Paciente
+from ftc.utils.masking import mask_cns, mask_cpf, mask_name
 
 ADMIN_AUTH_ERROR = 'Credenciais invalidas ou usuario sem permissao administrativa.'
 CIDADAO_AUTH_ERROR = 'CPF ou senha invalidos, ou cadastro sem paciente vinculado.'
@@ -355,27 +356,14 @@ class PacienteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Paciente
-        fields = '__all__'
+        fields = ('cpf', 'cns', 'nome_completo')
 
     def get_cpf(self, obj: Paciente) -> str:
-        return self._mascarar_documento(obj.cpf)
+        return mask_cpf(obj.cpf)
 
     def get_cns(self, obj: Paciente) -> str:
-        return self._mascarar_documento(obj.cns)
-
-    def _mascarar_documento(self, valor: str | None) -> str:
-        if not valor:
-            return ''
-        return f"{'*' * max(len(valor) - 4, 0)}{valor[-4:]}"
+        return mask_cns(obj.cns)
 
     def get_nome_completo(self, obj: Paciente) -> str:
-        partes = obj.nome_completo.split()
+        return mask_name(obj.nome_completo)
 
-        resultado = []
-
-        for parte in partes:
-            resultado.append(
-                parte[0] + "*" * (len(parte) - 1)
-            )
-
-        return " ".join(resultado)

@@ -7,6 +7,7 @@ from datetime import date
 
 # testando rota /pacientes
 from ftc.models import Paciente
+from ftc.utils.masking import mask_cns, mask_cpf, mask_name
 
 class PacienteViewTest(APITestCase):
 
@@ -21,18 +22,18 @@ class PacienteViewTest(APITestCase):
 
         response = self.client.get(reverse("pacientes"))
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertEqual(
             response.data[0]["cns"],
-            "***********2345"
+            mask_cns("123456789012345")
         )
 
         self.assertEqual(response.data[0]["cpf"], "")
 
         self.assertEqual(
             response.data[0]["nome_completo"],
-            "T******* M****** M***"
+            mask_name("Testando Marques Melo")
         )
 
     def test_mascara_cpf_e_aceita_cns_ausente(self):
@@ -43,9 +44,10 @@ class PacienteViewTest(APITestCase):
 
         response = self.client.get(reverse("pacientes"))
 
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data[0]["cpf"], "*******8901")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data[0]["cpf"], mask_cpf("12345678901"))
         self.assertEqual(response.data[0]["cns"], "")
+
 
 class AdminAuthTests(APITestCase):
     def setUp(self):

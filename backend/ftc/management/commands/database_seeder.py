@@ -7,6 +7,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from ftc.models import Especialidade, Paciente, PublicacaoFila, RegistroFila
+from ftc.utils.masking import mask_cns, mask_cpf, mask_name
 
 
 COMPETENCIA_SEED = date(2026, 6, 1)
@@ -278,10 +279,10 @@ class Command(BaseCommand):
                 defaults={
                     'paciente': paciente,
                     'data_solicitacao': date(2026, 5, (indice % 20) + 1),
-                    'nome_mascarado': f'P.S.{indice + 1}',
+                    'nome_mascarado': mask_name(paciente.nome_completo),
                     'ano_nascimento': 1980 + indice,
-                    'cpf_mascarado': self.mascarar_cpf(paciente.cpf),
-                    'cns_mascarado': self.mascarar_cns(paciente.cns),
+                    'cpf_mascarado': mask_cpf(paciente.cpf),
+                    'cns_mascarado': mask_cns(paciente.cns),
                     'sexo': Paciente.Sexo.NAO_INFORMADO,
                     'posicao': posicao,
                     'prioridade': prioridade,
@@ -292,8 +293,3 @@ class Command(BaseCommand):
             total += 1
         return total
 
-    def mascarar_cpf(self, cpf):
-        return f'{cpf[:3]}.***.***-{cpf[-2:]}'
-
-    def mascarar_cns(self, cns):
-        return f'{cns[:3]}********{cns[-4:]}'

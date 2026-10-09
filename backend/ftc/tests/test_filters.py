@@ -6,6 +6,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from ftc.models import Especialidade, Paciente, PublicacaoFila, RegistroFila
+from ftc.utils.masking import mask_cpf, mask_name
 
 
 class RegistroFilaFilterTests(APITestCase):
@@ -125,9 +126,9 @@ class RegistroFilaFilterTests(APITestCase):
             publicacao=publicacao,
             paciente=paciente,
             data_solicitacao=date(2026, 4, 6),
-            nome_mascarado='P.T.',
+            nome_mascarado=mask_name('Paciente Teste'),
             ano_nascimento=1990,
-            cpf_mascarado='123.***.***-01',
+            cpf_mascarado=mask_cpf('12345678901'),
             codigo_solicitacao=codigo,
             posicao=posicao,
             prioridade=prioridade,
