@@ -64,6 +64,11 @@ urlpatterns = [
     ),
     path('filas/opcoes/', FilaOpcoesView.as_view(), name='fila-opcoes'),
     path(
+        'filas/posicao/',
+        ConsultaPosicaoFilaAPIView.as_view(),
+        name='fila-posicao',
+    ),
+    path(
         'pacientes/',
         PacienteListView.as_view(),
         name='pacientes'
