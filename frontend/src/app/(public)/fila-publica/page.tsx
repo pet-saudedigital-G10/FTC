@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Search, Printer, SlidersHorizontal } from "lucide-react";
+import { Search, Printer, SlidersHorizontal, FileText } from "lucide-react";
 import { apiFetch, onlyDigits } from "@/lib/api";
 import { apiRoutes } from "@/lib/api-routes";
 import type { FilaOpcoes, RegistroFila } from "@/lib/api-types";
@@ -152,6 +152,17 @@ function HeroBanner() {
 // Individual tab
 // ---------------------------------------------------------------------------
 
+function gerarComprovante(filas: PosicaoResult["filas"]) {
+  const payload = {
+    filas,
+    emitido_em: new Date().toISOString(),
+    protocolo: `FTC-${Date.now().toString(36).toUpperCase()}`,
+  };
+  // localStorage é compartilhado entre abas da mesma origem (sessionStorage não é)
+  localStorage.setItem("comprovante_fila", JSON.stringify(payload));
+  window.open("/fila-publica/comprovante", "_blank");
+}
+
 function AbaIndividual({ opcoes }: { opcoes: FilaOpcoes | null }) {
   const [tipo, setTipo] = useState("pendentes");
   const [situacao, setSituacao] = useState("");
@@ -287,52 +298,66 @@ function AbaIndividual({ opcoes }: { opcoes: FilaOpcoes | null }) {
 
         {hasSearched && resultado && (
           resultado.encontrado && resultado.filas.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
+            <div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
                       <th className="py-3 pr-4 font-medium">Paciente</th>
-                    <th className="py-3 pr-4 font-medium">Especialidade</th>
-                    <th className="py-3 pr-4 font-medium">Tipo</th>
-                    <th className="py-3 pr-4 font-medium">Situação</th>
-                    <th className="py-3 pr-4 font-medium">Posição</th>
-                    <th className="py-3 pr-4 font-medium">Competência</th>
-                    <th className="py-3 font-medium">Solicitação</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {resultado.filas.map((fila, i) => (
-                    <tr
-                      key={i}
-                      className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
-                    >
-                      <td className="py-3 pr-4 font-medium text-slate-800">
-                        {fila.nome_mascarado}
-                      </td>
-                      <td className="py-3 pr-4 text-slate-700">
-                        {fila.especialidade}
-                      </td>
-                      <td className="py-3 pr-4 text-slate-600">
-                        {fila.tipo_especialidade}
-                      </td>
-                      <td className="py-3 pr-4">
-                        <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
-                          {fila.situacao_display}
-                        </span>
-                      </td>
-                      <td className="py-3 pr-4 font-semibold text-purple-700">
-                        #{fila.posicao}
-                      </td>
-                      <td className="py-3 pr-4 text-slate-600">
-                        {fila.competencia}
-                      </td>
-                      <td className="py-3 text-slate-600">
-                        {formatDate(fila.data_solicitacao)}
-                      </td>
+                      <th className="py-3 pr-4 font-medium">Especialidade</th>
+                      <th className="py-3 pr-4 font-medium">Tipo</th>
+                      <th className="py-3 pr-4 font-medium">Situação</th>
+                      <th className="py-3 pr-4 font-medium">Posição</th>
+                      <th className="py-3 pr-4 font-medium">Competência</th>
+                      <th className="py-3 font-medium">Solicitação</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {resultado.filas.map((fila, i) => (
+                      <tr
+                        key={i}
+                        className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
+                      >
+                        <td className="py-3 pr-4 font-medium text-slate-800">
+                          {fila.nome_mascarado}
+                        </td>
+                        <td className="py-3 pr-4 text-slate-700">
+                          {fila.especialidade}
+                        </td>
+                        <td className="py-3 pr-4 text-slate-600">
+                          {fila.tipo_especialidade}
+                        </td>
+                        <td className="py-3 pr-4">
+                          <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+                            {fila.situacao_display}
+                          </span>
+                        </td>
+                        <td className="py-3 pr-4 font-semibold text-purple-700">
+                          #{fila.posicao}
+                        </td>
+                        <td className="py-3 pr-4 text-slate-600">
+                          {fila.competencia}
+                        </td>
+                        <td className="py-3 text-slate-600">
+                          {formatDate(fila.data_solicitacao)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Botão gerar comprovante */}
+              <div className="mt-5 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => gerarComprovante(resultado.filas)}
+                  className="inline-flex items-center gap-2 rounded bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-800 transition-colors shadow-sm"
+                >
+                  <FileText className="h-4 w-4" />
+                  Gerar Comprovante
+                </button>
+              </div>
             </div>
           ) : (
             <EmptyState message="Nenhum registro encontrado para as informações informadas." />
