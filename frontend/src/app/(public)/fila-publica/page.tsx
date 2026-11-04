@@ -17,11 +17,13 @@ type PosicaoResult = {
   filas: {
     posicao: number;
     prioridade: number;
+    prioridade_display: string;
     situacao: string;
+    situacao_display: string;
     especialidade: string;
     tipo_especialidade: string;
     competencia: string;
-    nome_paciente: string;
+    nome_mascarado: string;
     data_solicitacao: string;
   }[];
 };
@@ -289,7 +291,7 @@ function AbaIndividual({ opcoes }: { opcoes: FilaOpcoes | null }) {
               <table className="w-full text-sm border-collapse">
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
-                    <th className="py-3 pr-4 font-medium">Paciente</th>
+                      <th className="py-3 pr-4 font-medium">Paciente</th>
                     <th className="py-3 pr-4 font-medium">Especialidade</th>
                     <th className="py-3 pr-4 font-medium">Tipo</th>
                     <th className="py-3 pr-4 font-medium">Situação</th>
@@ -305,7 +307,7 @@ function AbaIndividual({ opcoes }: { opcoes: FilaOpcoes | null }) {
                       className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
                     >
                       <td className="py-3 pr-4 font-medium text-slate-800">
-                        {fila.nome_paciente}
+                        {fila.nome_mascarado}
                       </td>
                       <td className="py-3 pr-4 text-slate-700">
                         {fila.especialidade}
@@ -315,7 +317,7 @@ function AbaIndividual({ opcoes }: { opcoes: FilaOpcoes | null }) {
                       </td>
                       <td className="py-3 pr-4">
                         <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
-                          {fila.situacao}
+                          {fila.situacao_display}
                         </span>
                       </td>
                       <td className="py-3 pr-4 font-semibold text-purple-700">
