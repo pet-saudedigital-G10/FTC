@@ -12,18 +12,22 @@ class RegistroFilaPublicSerializer(serializers.ModelSerializer):
     tipo_especialidade = serializers.CharField(source='publicacao.especialidade.get_tipo_display')
     competencia = serializers.DateField(source='publicacao.competencia')
 
-    nome_paciente = serializers.CharField(source='paciente.nome_completo')
+
+    situacao_display = serializers.CharField(source='get_situacao_display', read_only=True)
+    prioridade_display = serializers.CharField(source='get_prioridade_display', read_only=True)
 
     class Meta:
         model = RegistroFila
         fields = [
             'posicao',
             'prioridade',
+            'prioridade_display',
             'situacao',
+            'situacao_display',
             'especialidade',
             'tipo_especialidade',
             'competencia',
-            'nome_paciente',
+            'nome_mascarado',
             'data_solicitacao',
         ]
 

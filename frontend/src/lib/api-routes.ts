@@ -16,6 +16,8 @@ export const apiRoutes = {
     "/api/filas/especialidades/",
   filaOpcoes:
     process.env.NEXT_PUBLIC_FILA_OPCOES_PATH ?? "/api/filas/opcoes/",
+  filaPosicao:
+    process.env.NEXT_PUBLIC_FILA_POSICAO_PATH ?? "/api/filas/posicao/",
   pacientes:
     process.env.NEXT_PUBLIC_PACIENTES_PATH ?? "/api/pacientes/",
 
