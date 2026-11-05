@@ -23,6 +23,13 @@ from .fila import (
     RegistroFilaSerializer,
     RegistroFilaPublicSerializer,
 )
+from .sisreg import (
+    SisregFilaFiltroSerializer,
+    SisregFilaRespostaSerializer,
+    SisregGruposRespostaSerializer,
+    SisregImportacaoSerializer,
+    SisregStatusSerializer,
+)
 
 __all__ = [
     'AdminLogoutSerializer',
@@ -46,4 +53,9 @@ __all__ = [
     'FiltroOpcaoSerializer',
     'RegistroFilaSerializer',
     'RegistroFilaPublicSerializer',
+    'SisregFilaFiltroSerializer',
+    'SisregFilaRespostaSerializer',
+    'SisregGruposRespostaSerializer',
+    'SisregImportacaoSerializer',
+    'SisregStatusSerializer',
 ]

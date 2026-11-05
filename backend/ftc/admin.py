@@ -32,12 +32,13 @@ class PublicacaoFilaAdmin(admin.ModelAdmin):
         'especialidade',
         'competencia',
         'versao',
+        'origem',
         'status',
         'importado_em',
         'publicada_em',
     )
     search_fields = ('especialidade__nome', 'hash_arquivo')
-    list_filter = ('status', 'especialidade__tipo', 'competencia')
+    list_filter = ('status', 'origem', 'especialidade__tipo', 'competencia')
     autocomplete_fields = ('especialidade', 'importado_por')
     readonly_fields = ('importado_em',)
 

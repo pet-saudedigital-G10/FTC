@@ -100,6 +100,10 @@ class PublicacaoFila(models.Model):
         PUBLICADA = 'PUBLICADA', 'Publicada'
         ARQUIVADA = 'ARQUIVADA', 'Arquivada'
 
+    class Origem(models.TextChoices):
+        PDF = 'PDF', 'PDF'
+        SISREG = 'SISREG', 'SISREG'
+
     especialidade = models.ForeignKey(
         Especialidade,
         on_delete=models.PROTECT,
@@ -112,11 +116,16 @@ class PublicacaoFila(models.Model):
         default=1,
         validators=[MinValueValidator(1)],
     )
-    arquivo_original = models.FileField(upload_to='filas/%Y/%m/')
+    origem = models.CharField(
+        max_length=10,
+        choices=Origem.choices,
+        default=Origem.PDF,
+    )
+    arquivo_original = models.FileField(upload_to='filas/%Y/%m/', blank=True)
     hash_arquivo = models.CharField(
         max_length=64,
         unique=True,
-        help_text='SHA-256 do arquivo importado.',
+        help_text='SHA-256 do arquivo importado ou dos dados do SISREG.',
     )
     status = models.CharField(
         max_length=10,

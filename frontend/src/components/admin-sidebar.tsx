@@ -1,8 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ListFilter } from "lucide-react";
+import { Hospital, LayoutDashboard, ListFilter } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -15,14 +16,44 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { apiFetch } from "@/lib/api";
+import { apiRoutes } from "@/lib/api-routes";
+import type { SisregStatus } from "@/lib/api-types";
 
 const items = [
   { title: "Visão geral", url: "/dashboard", icon: LayoutDashboard },
   { title: "Registros da fila", url: "/dashboard#registros", icon: ListFilter },
 ];
 
+const sisregItem = {
+  title: "Fila do SISREG",
+  url: "/dashboard/sisreg",
+  icon: Hospital,
+};
+
 export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
+  const [sisregEnabled, setSisregEnabled] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    async function loadSisregStatus() {
+      try {
+        const status = await apiFetch<SisregStatus>(apiRoutes.sisregStatus, {
+          cache: "no-store",
+        });
+        if (active) setSisregEnabled(status.habilitado);
+      } catch {
+        // The optional item stays hidden when the status is unavailable.
+      }
+    }
+    void loadSisregStatus();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const menuItems = sisregEnabled ? [...items, sisregItem] : items;
 
   return (
     <Sidebar {...props}>
@@ -39,10 +70,10 @@ export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
           <SidebarGroupLabel>Gestão</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
-                    isActive={pathname === "/dashboard"}
+                    isActive={pathname === item.url.split("#")[0]}
                     tooltip={item.title}
                     render={<Link href={item.url} />}
                   >

@@ -16,6 +16,10 @@ from .views import (
     FilaOpcoesView,
     RegistroFilaListView,
     PacienteListView,
+    SisregFilaView,
+    SisregGruposView,
+    SisregImportacaoView,
+    SisregStatusView,
 )
 
 from ftc.views.fila import ConsultaPosicaoFilaAPIView
@@ -25,6 +29,22 @@ urlpatterns = [
         'admin/filas/atualizar/',
         AtualizacaoFilaView.as_view(),
         name='admin-fila-atualizar',
+    ),
+    path(
+        'admin/sisreg/status/',
+        SisregStatusView.as_view(),
+        name='admin-sisreg-status',
+    ),
+    path(
+        'admin/sisreg/grupos/',
+        SisregGruposView.as_view(),
+        name='admin-sisreg-grupos',
+    ),
+    path('admin/sisreg/fila/', SisregFilaView.as_view(), name='admin-sisreg-fila'),
+    path(
+        'admin/sisreg/importar/',
+        SisregImportacaoView.as_view(),
+        name='admin-sisreg-importar',
     ),
     path('admin/users/', AdminUserCreateView.as_view(), name='admin-user-create'),
     path('admin/auth/login/', AdminTokenObtainPairView.as_view(), name='admin-login'),

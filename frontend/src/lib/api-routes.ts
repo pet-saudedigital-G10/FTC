@@ -20,6 +20,15 @@ export const apiRoutes = {
     process.env.NEXT_PUBLIC_FILA_POSICAO_PATH ?? "/api/filas/posicao/",
   pacientes:
     process.env.NEXT_PUBLIC_PACIENTES_PATH ?? "/api/pacientes/",
+  sisregStatus:
+    process.env.NEXT_PUBLIC_SISREG_STATUS_PATH ?? "/api/admin/sisreg/status/",
+  sisregGrupos:
+    process.env.NEXT_PUBLIC_SISREG_GRUPOS_PATH ?? "/api/admin/sisreg/grupos/",
+  sisregFila:
+    process.env.NEXT_PUBLIC_SISREG_FILA_PATH ?? "/api/admin/sisreg/fila/",
+  sisregImportar:
+    process.env.NEXT_PUBLIC_SISREG_IMPORTAR_PATH ??
+    "/api/admin/sisreg/importar/",
 
   cidadaoLogin:
     process.env.NEXT_PUBLIC_CIDADAO_LOGIN_PATH ?? "/api/auth/cidadao/login/",

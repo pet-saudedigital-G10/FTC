@@ -261,6 +261,74 @@ somente os novos registros aparecem na API pública. A versão arquivada permane
 no banco para auditoria. Um PDF inválido ou duplicado, ou uma falha de gravação,
 não altera a fila vigente.
 
+## Integração opcional com o SISREG
+
+A aplicação pode obter a fila de regulação ambulatorial diretamente da
+[API SISREG](https://portalservicos-datasus.saude.gov.br/portfolio/NSsGTvxYk0) do
+DATASUS, como alternativa ao PDF. O recurso vem desligado: sem
+`SISREG_ENABLED=True`, nenhuma chamada externa é feita, o item não aparece no
+menu e a publicação por PDF continua funcionando normalmente.
+
+### Credencial
+
+O acesso é restrito a Secretarias de Saúde e Centrais de Regulação. O pedido é
+feito no Portal de Serviços do DATASUS, com conta gov.br nível Ouro e ofício
+assinado pelo gestor, conforme o Manual de Integração da API SISREG v3.0,
+disponível na mesma página. Após a aprovação, o Portal informa o Client ID (CNES
+do estabelecimento), o Client Secret e os índices liberados.
+
+Configure o `.env` do backend:
+
+```env
+SISREG_ENABLED=True
+SISREG_AMBIENTE=homologacao
+SISREG_CLIENT_ID=1234567
+SISREG_CLIENT_SECRET=valor_obtido_no_portal
+SISREG_INDICE=solicitacao-ambulatorial-es-vitoria
+SISREG_CENTRAIS_REGULADORAS=32C164,32C206
+```
+
+Use `SISREG_AMBIENTE=producao` somente depois de validar a integração em
+homologação. `SISREG_CENTRAIS_REGULADORAS` é opcional e limita a consulta às
+centrais informadas. Com o recurso ligado, o backend não inicia se a configuração
+estiver incompleta. O `client_secret` fica somente no ambiente do backend e nunca
+é enviado ao navegador.
+
+### Uso
+
+Funcionários com `is_staff=True` acessam a área em `/dashboard/sisreg`:
+
+```text
+GET  /api/admin/sisreg/status/
+GET  /api/admin/sisreg/grupos/
+GET  /api/admin/sisreg/fila/?grupo=0701001&pagina=1
+POST /api/admin/sisreg/importar/
+```
+
+A consulta não grava nada. A importação recebe `especialidade` e
+`codigo_grupo_procedimento`, percorre toda a fila do grupo e substitui a
+publicação vigente da especialidade, que passa para `ARQUIVADA`. A operação segue
+as regras do PDF: qualquer falha, resposta parcial ou registro inválido mantém a
+fila vigente. A competência é o mês atual, e uma fila idêntica à publicada não
+gera nova versão.
+
+### Tratamento dos dados
+
+- São solicitados ao SISREG somente os campos usados; endereço, telefone e nome
+  da mãe não são consultados.
+- Nome e CNS são mascarados antes de sair do serviço e de serem gravados.
+- O CNS e o CPF completos são usados apenas em memória, para vincular a
+  solicitação a um `Paciente` já cadastrado. Nenhum paciente é criado.
+
+### Regras a validar com a Central de Regulação
+
+O SISREG não informa a posição na fila. Ela é calculada pela classificação de
+risco e, em seguida, pela data da solicitação, e o manual recomenda validar as
+consultas e as características locais com a área negocial. A "Prioridade 0"
+(emergência) do SISREG é publicada como `Prioridade 1`, pois a FTC possui três
+níveis. A integração cobre apenas solicitações ambulatoriais: o índice
+`solicitacao-hospitalar` não é consultado.
+
 ## Acesso do cidadão
 
 O login do cidadão usa uma conta Django comum, com `is_staff=False`, cujo

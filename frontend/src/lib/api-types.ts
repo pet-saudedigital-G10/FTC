@@ -68,3 +68,51 @@ export type RegistroFila = {
   situacao: string;
   situacao_display: string;
 };
+
+export type SisregStatus = {
+  habilitado: boolean;
+  ambiente: string | null;
+  indice: string | null;
+};
+
+export type SisregGrupo = {
+  codigo: string;
+  nome: string;
+  total: number;
+};
+
+export type SisregGrupos = {
+  total: number;
+  grupos: SisregGrupo[];
+};
+
+export type SisregRegistro = {
+  codigo_solicitacao: string;
+  data_solicitacao: string;
+  nome_mascarado: string;
+  cns_mascarado: string;
+  codigo_grupo_procedimento: string;
+  nome_grupo_procedimento: string;
+  classificacao_risco: string;
+  situacao: string;
+  situacao_display: string;
+};
+
+export type SisregFila = {
+  total: number;
+  pagina: number;
+  tamanho_pagina: number;
+  registros: SisregRegistro[];
+};
+
+export type PublicacaoImportada = {
+  publicacao_id: number;
+  especialidade_id: number;
+  competencia: string;
+  versao: number;
+  status: string;
+  registros_importados: number;
+  publicacoes_substituidas: number[];
+  importado_em: string;
+  publicada_em: string;
+};

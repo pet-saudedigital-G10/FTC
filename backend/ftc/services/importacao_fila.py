@@ -250,6 +250,21 @@ def calcular_hash_arquivo(arquivo):
     return digest.hexdigest()
 
 
+def publicar_registros(publicacao, registros, anteriores):
+    """Grava os registros e troca a publicacao vigente da especialidade."""
+    RegistroFila.objects.bulk_create([
+        RegistroFila(publicacao=publicacao, **registro)
+        for registro in registros
+    ])
+
+    PublicacaoFila.objects.filter(id__in=anteriores).update(
+        status=PublicacaoFila.Status.ARQUIVADA,
+    )
+    publicacao.status = PublicacaoFila.Status.PUBLICADA
+    publicacao.publicada_em = timezone.now()
+    publicacao.save(update_fields=['status', 'publicada_em'])
+
+
 def atualizar_fila_por_pdf(
     *,
     arquivo,
@@ -310,23 +325,19 @@ def atualizar_fila_por_pdf(
             publicacao.save(force_insert=True)
             nome_armazenado = publicacao.arquivo_original.name
 
-            RegistroFila.objects.bulk_create([
-                RegistroFila(
-                    publicacao=publicacao,
-                    prioridade=prioridade,
-                    tipo=tipo,
-                    situacao=situacao,
-                    **registro,
-                )
-                for registro in registros
-            ])
-
-            PublicacaoFila.objects.filter(id__in=anteriores).update(
-                status=PublicacaoFila.Status.ARQUIVADA,
+            publicar_registros(
+                publicacao,
+                [
+                    {
+                        **registro,
+                        'prioridade': prioridade,
+                        'tipo': tipo,
+                        'situacao': situacao,
+                    }
+                    for registro in registros
+                ],
+                anteriores,
             )
-            publicacao.status = PublicacaoFila.Status.PUBLICADA
-            publicacao.publicada_em = timezone.now()
-            publicacao.save(update_fields=['status', 'publicada_em'])
     except Exception:
         if (
             not nome_armazenado

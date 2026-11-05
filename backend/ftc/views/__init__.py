@@ -18,6 +18,12 @@ from .fila import (
     FilaOpcoesView,
     RegistroFilaListView,
 )
+from .sisreg import (
+    SisregFilaView,
+    SisregGruposView,
+    SisregImportacaoView,
+    SisregStatusView,
+)
 
 __all__ = [
     'AdminLogoutView',
@@ -36,4 +42,8 @@ __all__ = [
     'EspecialidadeListView',
     'FilaOpcoesView',
     'RegistroFilaListView',
+    'SisregFilaView',
+    'SisregGruposView',
+    'SisregImportacaoView',
+    'SisregStatusView',
 ]

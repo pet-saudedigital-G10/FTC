@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 import os
+import re
 from datetime import timedelta
 from pathlib import Path
 
@@ -186,6 +187,46 @@ FILA_PDF_MAX_SIZE_BYTES = int(
 FILA_PDF_MAX_PAGES = int(os.getenv('FILA_PDF_MAX_PAGES', '200'))
 FILA_PDF_MAX_RECORDS = int(os.getenv('FILA_PDF_MAX_RECORDS', '50000'))
 
+# Integracao opcional com a API SISREG. Sem SISREG_ENABLED, nenhuma chamada
+# externa e feita e as demais variaveis nao precisam ser informadas.
+SISREG_ENABLED = env_bool('SISREG_ENABLED', False)
+SISREG_AMBIENTES = {
+    'homologacao': {
+        'sso': 'https://sso-hom.saude.gov.br',
+        'api': 'https://servicos-es-hmg.saude.gov.br',
+    },
+    'producao': {
+        'sso': 'https://sso.saude.gov.br',
+        'api': 'https://servicos-es.saude.gov.br',
+    },
+}
+SISREG_AMBIENTE = os.getenv('SISREG_AMBIENTE', 'homologacao')
+SISREG_CLIENT_ID = os.getenv('SISREG_CLIENT_ID', '')
+SISREG_CLIENT_SECRET = os.getenv('SISREG_CLIENT_SECRET', '')
+SISREG_INDICE = os.getenv('SISREG_INDICE', '')
+SISREG_CENTRAIS_REGULADORAS = env_list('SISREG_CENTRAIS_REGULADORAS')
+SISREG_TIMEOUT_SECONDS = int(os.getenv('SISREG_TIMEOUT_SECONDS', '30'))
+SISREG_PAGE_SIZE = int(os.getenv('SISREG_PAGE_SIZE', '1000'))
+SISREG_MAX_RECORDS = int(os.getenv('SISREG_MAX_RECORDS', '50000'))
+
+if SISREG_ENABLED:
+    if SISREG_AMBIENTE not in SISREG_AMBIENTES:
+        raise ImproperlyConfigured(
+            'SISREG_AMBIENTE must be homologacao or producao.'
+        )
+    if not SISREG_CLIENT_ID or not SISREG_CLIENT_SECRET:
+        raise ImproperlyConfigured(
+            'SISREG_CLIENT_ID and SISREG_CLIENT_SECRET must be set.'
+        )
+    if not re.fullmatch(r'solicitacao-ambulatorial-[a-z0-9_-]+', SISREG_INDICE):
+        raise ImproperlyConfigured(
+            'SISREG_INDICE must be a solicitacao-ambulatorial index.'
+        )
+    if not 1 <= SISREG_PAGE_SIZE <= 10000:
+        raise ImproperlyConfigured(
+            'SISREG_PAGE_SIZE must be between 1 and 10000.'
+        )
+
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -210,6 +251,7 @@ REST_FRAMEWORK = {
         ),
         'token_refresh': os.getenv('TOKEN_REFRESH_THROTTLE_RATE', '10/minute'),
         'fila_importacao': os.getenv('FILA_IMPORT_THROTTLE_RATE', '10/hour'),
+        'sisreg': os.getenv('SISREG_THROTTLE_RATE', '60/hour'),
     },
 }
 
