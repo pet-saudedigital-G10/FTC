@@ -1,4 +1,6 @@
-from django.conf import settings
+import logging
+from copy import copy
+
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.exceptions import APIException, ValidationError
@@ -6,14 +8,18 @@ from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ftc.permissions import IsSisregEnabled
+from ftc.models import ConfiguracaoSisreg
+from ftc.permissions import IsSisregConfigurator, IsSisregEnabled
 from ftc.serializers import (
     AtualizacaoFilaRespostaSerializer,
+    SisregConfiguracaoSerializer,
     SisregFilaFiltroSerializer,
     SisregFilaRespostaSerializer,
     SisregGruposRespostaSerializer,
     SisregImportacaoSerializer,
     SisregStatusSerializer,
+    SisregTesteConexaoSerializer,
+    SisregTesteRespostaSerializer,
 )
 from ftc.services import (
     ErroImportacaoSisreg,
@@ -21,7 +27,11 @@ from ftc.services import (
     consultar_fila_sisreg,
     importar_fila_sisreg,
     listar_grupos_sisreg,
+    testar_conexao_sisreg,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class SisregIndisponivel(APIException):
@@ -50,12 +60,76 @@ class SisregStatusView(APIView):
         responses=SisregStatusSerializer,
     )
     def get(self, request):
-        habilitado = settings.SISREG_ENABLED
+        configuracao = ConfiguracaoSisreg.carregar()
+        habilitado = configuracao.habilitado
         return Response({
             'habilitado': habilitado,
-            'ambiente': settings.SISREG_AMBIENTE if habilitado else None,
-            'indice': settings.SISREG_INDICE if habilitado else None,
+            'ambiente': configuracao.ambiente if habilitado else None,
+            'indice': configuracao.indice if habilitado else None,
+            'pode_configurar': request.user.is_superuser,
         })
+
+
+class SisregConfiguracaoView(APIView):
+    permission_classes = [IsSisregConfigurator]
+
+    @extend_schema(
+        tags=['Integracao SISREG'],
+        summary='Consultar a configuracao da integracao, sem o Client Secret',
+        responses=SisregConfiguracaoSerializer,
+    )
+    def get(self, request):
+        return Response(
+            SisregConfiguracaoSerializer(ConfiguracaoSisreg.carregar()).data
+        )
+
+    @extend_schema(
+        tags=['Integracao SISREG'],
+        summary='Salvar a configuracao da integracao',
+        description='Um Client Secret em branco mantem o valor ja salvo.',
+        request=SisregConfiguracaoSerializer,
+        responses=SisregConfiguracaoSerializer,
+    )
+    def put(self, request):
+        configuracao = ConfiguracaoSisreg.carregar()
+        serializer = SisregConfiguracaoSerializer(
+            configuracao,
+            data=request.data,
+        )
+        serializer.is_valid(raise_exception=True)
+
+        serializer.aplicar(configuracao)
+        configuracao.atualizado_por = request.user
+        configuracao.save()
+        logger.info(
+            'Configuracao do SISREG atualizada: habilitado=%s ambiente=%s usuario=%s',
+            configuracao.habilitado,
+            configuracao.ambiente,
+            request.user.pk,
+        )
+        return Response(SisregConfiguracaoSerializer(configuracao).data)
+
+
+class SisregTesteConexaoView(SisregAPIView):
+    permission_classes = [IsSisregConfigurator]
+
+    @extend_schema(
+        tags=['Integracao SISREG'],
+        summary='Testar os dados informados, sem salvar',
+        description='Um Client Secret em branco usa o valor ja salvo.',
+        request=SisregTesteConexaoSerializer,
+        responses=SisregTesteRespostaSerializer,
+    )
+    def post(self, request):
+        configuracao = ConfiguracaoSisreg.carregar()
+        serializer = SisregTesteConexaoSerializer(
+            configuracao,
+            data=request.data,
+        )
+        serializer.is_valid(raise_exception=True)
+
+        total = testar_conexao_sisreg(serializer.aplicar(copy(configuracao)))
+        return Response(SisregTesteRespostaSerializer({'total': total}).data)
 
 
 class SisregGruposView(SisregAPIView):

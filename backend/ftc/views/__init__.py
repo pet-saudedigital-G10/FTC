@@ -19,11 +19,15 @@ from .fila import (
     RegistroFilaListView,
 )
 from .sisreg import (
+    SisregConfiguracaoView,
     SisregFilaView,
     SisregGruposView,
     SisregImportacaoView,
     SisregStatusView,
+    SisregTesteConexaoView,
 )
+
+from .transparencia import TransparenciaIndicadoresView, TransparenciaPosicaoView
 
 __all__ = [
     'AdminLogoutView',
@@ -42,8 +46,12 @@ __all__ = [
     'EspecialidadeListView',
     'FilaOpcoesView',
     'RegistroFilaListView',
+    'SisregConfiguracaoView',
     'SisregFilaView',
     'SisregGruposView',
     'SisregImportacaoView',
     'SisregStatusView',
+    'SisregTesteConexaoView',
+    'TransparenciaIndicadoresView',
+    'TransparenciaPosicaoView',
 ]

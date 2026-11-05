@@ -12,7 +12,13 @@ from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
 
-from ftc.models import Especialidade, Paciente, PublicacaoFila, RegistroFila
+from ftc.models import (
+    ConfiguracaoSisreg,
+    Especialidade,
+    Paciente,
+    PublicacaoFila,
+    RegistroFila,
+)
 from ftc.services.importacao_fila import (
     ResultadoAtualizacaoFila,
     publicar_registros,
@@ -22,7 +28,7 @@ from ftc.utils.masking import mask_cns, mask_name
 
 logger = logging.getLogger(__name__)
 
-TOKEN_CACHE_KEY = 'sisreg:access_token'
+TOKEN_CACHE_PREFIXO = 'sisreg:access_token'
 TOKEN_MARGEM_SEGUNDOS = 30
 SCROLL_VALIDADE = '5m'
 TAMANHO_PAGINA = 50
@@ -87,8 +93,20 @@ class ErroImportacaoSisreg(ErroSisreg):
     """Dados ou parametros que impedem a operacao solicitada."""
 
 
-def _urls():
-    return settings.SISREG_AMBIENTES[settings.SISREG_AMBIENTE]
+def _urls(configuracao):
+    return settings.SISREG_AMBIENTES[configuracao.ambiente]
+
+
+def _chave_token(configuracao):
+    # Derivada da credencial: trocar a configuracao invalida o token em todos
+    # os processos, e um teste de conexao nao reaproveita o token salvo.
+    credencial = ':'.join((
+        configuracao.ambiente,
+        configuracao.client_id,
+        configuracao.client_secret,
+    ))
+    digest = hashlib.sha256(credencial.encode('utf-8')).hexdigest()
+    return f'{TOKEN_CACHE_PREFIXO}:{digest}'
 
 
 def _enviar(metodo, url, **kwargs):
@@ -107,19 +125,24 @@ def _enviar(metodo, url, **kwargs):
         raise ErroSisreg('Não foi possível conectar ao SISREG.') from exc
 
 
-def _obter_token(*, renovar=False):
+def _obter_token(configuracao, *, renovar=False):
+    if not configuracao.client_id or not configuracao.client_secret:
+        raise ErroSisreg('Informe novamente a credencial do SISREG.')
+
+    chave = _chave_token(configuracao)
     if not renovar:
-        token = cache.get(TOKEN_CACHE_KEY)
+        token = cache.get(chave)
         if token:
             return token
 
     resposta = _enviar(
         'POST',
-        f'{_urls()["sso"]}/realms/portal-servicos/protocol/openid-connect/token',
+        f'{_urls(configuracao)["sso"]}/realms/portal-servicos/protocol/'
+        'openid-connect/token',
         data={
             'grant_type': 'client_credentials',
-            'client_id': settings.SISREG_CLIENT_ID,
-            'client_secret': settings.SISREG_CLIENT_SECRET,
+            'client_id': configuracao.client_id,
+            'client_secret': configuracao.client_secret,
         },
     )
     if resposta.status_code != 200:
@@ -134,7 +157,7 @@ def _obter_token(*, renovar=False):
         raise ErroSisreg('O SISREG devolveu um token inválido.') from exc
 
     cache.set(
-        TOKEN_CACHE_KEY,
+        chave,
         token,
         max(validade - TOKEN_MARGEM_SEGUNDOS, 1),
     )
@@ -167,10 +190,10 @@ def _extrair_dados(resposta):
     return dados
 
 
-def _requisitar(metodo, caminho, *, params=None, corpo=None):
-    url = f'{_urls()["api"]}/SISREG/{caminho}'
+def _requisitar(configuracao, metodo, caminho, *, params=None, corpo=None):
+    url = f'{_urls(configuracao)["api"]}/SISREG/{caminho}'
     for renovar in (False, True):
-        token = _obter_token(renovar=renovar)
+        token = _obter_token(configuracao, renovar=renovar)
         resposta = _enviar(
             metodo,
             url,
@@ -183,15 +206,15 @@ def _requisitar(metodo, caminho, *, params=None, corpo=None):
     return _extrair_dados(resposta)
 
 
-def _consulta_fila(codigo_grupo=''):
+def _consulta_fila(configuracao, codigo_grupo=''):
     filtros = [
         {'terms': {'status_solicitacao.keyword': list(SITUACOES_FILA)}},
         {'terms': {'codigo_tipo_regulacao': ['R', 'F']}},
     ]
-    if settings.SISREG_CENTRAIS_REGULADORAS:
+    if configuracao.centrais_reguladoras:
         filtros.append({
             'terms': {
-                'codigo_central_reguladora': settings.SISREG_CENTRAIS_REGULADORAS,
+                'codigo_central_reguladora': configuracao.centrais_reguladoras,
             },
         })
     if codigo_grupo:
@@ -204,16 +227,17 @@ def _fontes(dados):
     return [hit.get('_source') or {} for hit in hits]
 
 
-def _percorrer_fila(campos, codigo_grupo=''):
+def _percorrer_fila(configuracao, campos, codigo_grupo=''):
     """Recupera a fila inteira em lotes, conforme a secao 7.5 do manual."""
     dados = _requisitar(
+        configuracao,
         'GET',
-        f'{settings.SISREG_INDICE}/_search',
+        f'{configuracao.indice}/_search',
         params={'scroll': SCROLL_VALIDADE},
         corpo={
             'size': settings.SISREG_PAGE_SIZE,
             '_source': list(campos),
-            'query': _consulta_fila(codigo_grupo),
+            'query': _consulta_fila(configuracao, codigo_grupo),
         },
     )
 
@@ -234,6 +258,7 @@ def _percorrer_fila(campos, codigo_grupo=''):
         if not scroll_id:
             raise ErroSisreg('O SISREG devolveu uma resposta incompleta.')
         dados = _requisitar(
+            configuracao,
             'POST',
             '_search/scroll',
             corpo={'scroll': SCROLL_VALIDADE, 'scroll_id': scroll_id},
@@ -366,9 +391,18 @@ def _calcular_hash(registros, especialidade, competencia, versao):
     return hashlib.sha256(conteudo.encode('utf-8')).hexdigest()
 
 
+def testar_conexao_sisreg(configuracao):
+    """Autentica e conta os registros do indice, sem gravar nada."""
+    dados = _requisitar(configuracao, 'GET', f'{configuracao.indice}/_count')
+    try:
+        return int(dados['count'])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ErroSisreg('O SISREG devolveu uma resposta inválida.') from exc
+
+
 def listar_grupos_sisreg():
     """Resume a fila por grupo de procedimento, o agrupamento usado na importacao."""
-    fontes = _percorrer_fila(CAMPOS_GRUPOS)
+    fontes = _percorrer_fila(ConfiguracaoSisreg.carregar(), CAMPOS_GRUPOS)
     totais = Counter(fonte.get('codigo_grupo_procedimento') for fonte in fontes)
     nomes = {
         fonte.get('codigo_grupo_procedimento'): fonte.get('nome_grupo_procedimento')
@@ -393,15 +427,17 @@ def consultar_fila_sisreg(*, codigo_grupo='', pagina=1):
             f'A consulta está limitada aos primeiros {LIMITE_PAGINACAO} registros.'
         )
 
+    configuracao = ConfiguracaoSisreg.carregar()
     dados = _requisitar(
+        configuracao,
         'GET',
-        f'{settings.SISREG_INDICE}/_search',
+        f'{configuracao.indice}/_search',
         params={'track_total_hits': 'true'},
         corpo={
             'from': inicio,
             'size': TAMANHO_PAGINA,
             '_source': list(CAMPOS_FILA),
-            'query': _consulta_fila(codigo_grupo),
+            'query': _consulta_fila(configuracao, codigo_grupo),
             'sort': [
                 {'codigo_classificacao_risco': {'order': 'asc'}},
                 {'data_solicitacao': {'order': 'asc'}},
@@ -439,7 +475,8 @@ def consultar_fila_sisreg(*, codigo_grupo='', pagina=1):
 
 def importar_fila_sisreg(*, especialidade, codigo_grupo, importado_por):
     """Publica a fila de um grupo do SISREG no lugar da publicacao vigente."""
-    fontes = _percorrer_fila(CAMPOS_IMPORTACAO, codigo_grupo)
+    configuracao = ConfiguracaoSisreg.carregar()
+    fontes = _percorrer_fila(configuracao, CAMPOS_IMPORTACAO, codigo_grupo)
     if not fontes:
         raise ErroImportacaoSisreg(
             'O SISREG não possui solicitações na fila para este grupo.'
@@ -501,7 +538,7 @@ def importar_fila_sisreg(*, especialidade, codigo_grupo, importado_por):
             status=PublicacaoFila.Status.RASCUNHO,
             importado_por=importado_por,
             observacao=(
-                f'Importado do SISREG: {settings.SISREG_INDICE}, '
+                f'Importado do SISREG: {configuracao.indice}, '
                 f'grupo {codigo_grupo}.'
             ),
         )

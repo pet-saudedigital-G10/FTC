@@ -18,10 +18,22 @@ export const apiRoutes = {
     process.env.NEXT_PUBLIC_FILA_OPCOES_PATH ?? "/api/filas/opcoes/",
   filaPosicao:
     process.env.NEXT_PUBLIC_FILA_POSICAO_PATH ?? "/api/filas/posicao/",
+  transparenciaIndicadores:
+    process.env.NEXT_PUBLIC_TRANSPARENCIA_INDICADORES_PATH ??
+    "/api/transparencia/indicadores/",
+  transparenciaPosicao:
+    process.env.NEXT_PUBLIC_TRANSPARENCIA_POSICAO_PATH ??
+    "/api/transparencia/posicao/",
   pacientes:
     process.env.NEXT_PUBLIC_PACIENTES_PATH ?? "/api/pacientes/",
   sisregStatus:
     process.env.NEXT_PUBLIC_SISREG_STATUS_PATH ?? "/api/admin/sisreg/status/",
+  sisregConfiguracao:
+    process.env.NEXT_PUBLIC_SISREG_CONFIGURACAO_PATH ??
+    "/api/admin/sisreg/configuracao/",
+  sisregTestar:
+    process.env.NEXT_PUBLIC_SISREG_TESTAR_PATH ??
+    "/api/admin/sisreg/configuracao/testar/",
   sisregGrupos:
     process.env.NEXT_PUBLIC_SISREG_GRUPOS_PATH ?? "/api/admin/sisreg/grupos/",
   sisregFila:

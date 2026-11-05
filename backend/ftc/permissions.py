@@ -1,7 +1,6 @@
-from django.conf import settings
 from rest_framework.permissions import BasePermission
 
-from ftc.models import Paciente
+from ftc.models import ConfiguracaoSisreg, Paciente
 
 
 class IsSuperUser(BasePermission):
@@ -17,11 +16,15 @@ class IsSuperUser(BasePermission):
         )
 
 
+class IsSisregConfigurator(IsSuperUser):
+    message = 'Apenas superusuarios podem configurar a integracao com o SISREG.'
+
+
 class IsSisregEnabled(BasePermission):
     message = 'A integracao com o SISREG nao esta habilitada.'
 
     def has_permission(self, request, view):
-        return settings.SISREG_ENABLED
+        return ConfiguracaoSisreg.carregar().habilitado
 
 
 class IsCitizen(BasePermission):

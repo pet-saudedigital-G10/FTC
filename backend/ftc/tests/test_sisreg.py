@@ -9,7 +9,13 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from ftc.models import Especialidade, Paciente, PublicacaoFila, RegistroFila
+from ftc.models import (
+    ConfiguracaoSisreg,
+    Especialidade,
+    Paciente,
+    PublicacaoFila,
+    RegistroFila,
+)
 
 
 INDICE = 'solicitacao-ambulatorial-es-vitoria'
@@ -17,13 +23,7 @@ PENDENTE_REGULADOR = 'SOLICITAÇÃO / PENDENTE / REGULADOR'
 PENDENTE_FILA = 'SOLICITAÇÃO / PENDENTE / FILA DE ESPERA'
 REENVIADA = 'SOLICITAÇÃO / REENVIADA / REGULADOR'
 
-sisreg_habilitado = override_settings(
-    SISREG_ENABLED=True,
-    SISREG_AMBIENTE='homologacao',
-    SISREG_CLIENT_ID='1234567',
-    SISREG_CLIENT_SECRET='segredo-de-teste',
-    SISREG_INDICE=INDICE,
-    SISREG_CENTRAIS_REGULADORAS=['32C164'],
+limites_de_teste = override_settings(
     SISREG_PAGE_SIZE=2,
     SISREG_MAX_RECORDS=5,
 )
@@ -80,8 +80,19 @@ def resposta_busca(fontes, scroll_id='scroll-1', total=None, **dados):
 
 
 class SisregAPITestCase(APITestCase):
+    integracao_ativa = True
+
     def setUp(self):
         cache.clear()
+        if self.integracao_ativa:
+            configuracao = ConfiguracaoSisreg(
+                habilitado=True,
+                client_id='1234567',
+                indice=INDICE,
+                centrais_reguladoras=['32C164'],
+            )
+            configuracao.client_secret = 'segredo-de-teste'
+            configuracao.save()
         User = get_user_model()
         self.staff = User.objects.create_user(
             username='servidora.sisreg',
@@ -123,13 +134,20 @@ class SisregAPITestCase(APITestCase):
 
 
 class SisregDesabilitadoTests(SisregAPITestCase):
+    integracao_ativa = False
+
     def test_vem_desabilitado_por_padrao(self):
         resposta = self.client.get(reverse('admin-sisreg-status'))
 
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.assertEqual(
             resposta.data,
-            {'habilitado': False, 'ambiente': None, 'indice': None},
+            {
+                'habilitado': False,
+                'ambiente': None,
+                'indice': None,
+                'pode_configurar': False,
+            },
         )
 
     def test_nao_chama_api_externa_quando_desabilitado(self):
@@ -141,7 +159,7 @@ class SisregDesabilitadoTests(SisregAPITestCase):
         self.request.assert_not_called()
 
 
-@sisreg_habilitado
+@limites_de_teste
 class SisregPermissaoTests(SisregAPITestCase):
     def test_cidadao_nao_acessa(self):
         self.client.force_authenticate(self.cidadao)
@@ -166,12 +184,17 @@ class SisregPermissaoTests(SisregAPITestCase):
 
         self.assertEqual(
             resposta.data,
-            {'habilitado': True, 'ambiente': 'homologacao', 'indice': INDICE},
+            {
+                'habilitado': True,
+                'ambiente': 'homologacao',
+                'indice': INDICE,
+                'pode_configurar': False,
+            },
         )
         self.assertNotIn('segredo-de-teste', str(resposta.content))
 
 
-@sisreg_habilitado
+@limites_de_teste
 class SisregClienteTests(SisregAPITestCase):
     def test_autentica_conforme_o_manual(self):
         self.request.side_effect = [resposta_token(), resposta_busca([fonte(1)])]
@@ -283,7 +306,7 @@ class SisregClienteTests(SisregAPITestCase):
         self.assertIn('permissão', resposta.data['detail'])
 
 
-@sisreg_habilitado
+@limites_de_teste
 class SisregConsultaTests(SisregAPITestCase):
     def test_consulta_usa_filtros_da_fila_e_minimiza_campos(self):
         self.request.side_effect = [resposta_token(), resposta_busca([fonte(1)])]
@@ -409,7 +432,7 @@ class SisregConsultaTests(SisregAPITestCase):
         )
 
 
-@sisreg_habilitado
+@limites_de_teste
 class SisregImportacaoTests(SisregAPITestCase):
     def publicada_atual(self):
         return PublicacaoFila.objects.get(
@@ -677,3 +700,255 @@ class SisregImportacaoTests(SisregAPITestCase):
         self.assertEqual(len(resposta.data), 1)
         self.assertEqual(resposta.data[0]['nome_mascarado'], 'M**** d* S****')
         self.assertNotIn('Maria', str(resposta.content))
+
+
+class SisregConfiguracaoTests(SisregAPITestCase):
+    integracao_ativa = False
+
+    def setUp(self):
+        super().setUp()
+        self.superusuario = get_user_model().objects.create_superuser(
+            username='super.sisreg',
+            password='SenhaForte123!',
+        )
+        self.client.force_authenticate(self.superusuario)
+        self.url = reverse('admin-sisreg-configuracao')
+        self.url_teste = reverse('admin-sisreg-testar')
+
+    def dados(self, **campos):
+        return {
+            'habilitado': True,
+            'ambiente': 'homologacao',
+            'client_id': '1234567',
+            'client_secret': 'segredo-da-tela',
+            'indice': INDICE,
+            'centrais_reguladoras': ['32C164'],
+            **campos,
+        }
+
+    def salvar(self, **campos):
+        return self.client.put(self.url, self.dados(**campos), format='json')
+
+    def test_somente_superusuario_acessa(self):
+        for usuario in (self.staff, self.cidadao):
+            self.client.force_authenticate(usuario)
+            self.assertEqual(
+                self.client.get(self.url).status_code,
+                status.HTTP_403_FORBIDDEN,
+            )
+            self.assertEqual(self.salvar().status_code, status.HTTP_403_FORBIDDEN)
+            self.assertEqual(
+                self.client.post(self.url_teste, self.dados(), format='json').status_code,
+                status.HTTP_403_FORBIDDEN,
+            )
+
+        self.assertFalse(ConfiguracaoSisreg.objects.exists())
+        self.request.assert_not_called()
+
+    def test_status_indica_quem_pode_configurar(self):
+        resposta = self.client.get(reverse('admin-sisreg-status'))
+
+        self.assertIs(resposta.data['pode_configurar'], True)
+
+    def test_vem_desligada_sem_configuracao(self):
+        resposta = self.client.get(self.url)
+
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertIs(resposta.data['habilitado'], False)
+        self.assertEqual(resposta.data['ambiente'], 'homologacao')
+        self.assertIs(resposta.data['client_secret_configurado'], False)
+
+    def test_salvar_habilita_a_integracao_pela_api(self):
+        resposta = self.salvar()
+
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        configuracao = ConfiguracaoSisreg.carregar()
+        self.assertEqual(configuracao.atualizado_por, self.superusuario)
+        self.assertEqual(configuracao.client_secret, 'segredo-da-tela')
+
+        self.client.force_authenticate(self.staff)
+        self.request.side_effect = [resposta_token(), resposta_busca([fonte(1)])]
+        resposta = self.client.get(reverse('admin-sisreg-fila'))
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.request.call_args_list[0].kwargs['data']['client_secret'],
+            'segredo-da-tela',
+        )
+
+    def test_segredo_e_gravado_cifrado_e_nunca_devolvido(self):
+        resposta = self.salvar()
+
+        self.assertNotIn('client_secret', resposta.data)
+        self.assertNotIn('segredo-da-tela', str(resposta.content))
+        self.assertIs(resposta.data['client_secret_configurado'], True)
+        self.assertNotIn('segredo-da-tela', str(self.client.get(self.url).content))
+        self.assertNotIn(
+            'segredo-da-tela',
+            ConfiguracaoSisreg.objects.get().client_secret_cifrado,
+        )
+
+    def test_segredo_em_branco_mantem_o_atual(self):
+        self.salvar()
+
+        resposta = self.salvar(client_secret='', indice=f'{INDICE}-2')
+
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        configuracao = ConfiguracaoSisreg.carregar()
+        self.assertEqual(configuracao.client_secret, 'segredo-da-tela')
+        self.assertEqual(configuracao.indice, f'{INDICE}-2')
+
+    def test_desligar_nao_apaga_a_credencial(self):
+        self.salvar()
+
+        resposta = self.salvar(habilitado=False, client_secret='')
+
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.client.get(reverse('admin-sisreg-fila')).status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+        self.assertIs(self.client.get(self.url).data['client_secret_configurado'], True)
+
+    def test_habilitar_exige_todos_os_dados(self):
+        resposta = self.salvar(client_id='', client_secret='', indice='')
+
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            set(resposta.data),
+            {'client_id', 'client_secret', 'indice'},
+        )
+        self.assertFalse(ConfiguracaoSisreg.objects.exists())
+
+    def test_rejeita_valores_invalidos(self):
+        casos = {
+            'ambiente': 'https://atacante.example',
+            'client_id': '12345',
+            'indice': '../../_cluster/settings',
+        }
+        for campo, valor in casos.items():
+            with self.subTest(campo=campo):
+                resposta = self.salvar(**{campo: valor})
+                self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn(campo, resposta.data)
+
+        resposta = self.salvar(indice='marcacao-ambulatorial-es-vitoria')
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        resposta = self.salvar(centrais_reguladoras=['32C164"]'])
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(ConfiguracaoSisreg.objects.exists())
+
+    def test_url_nao_pode_ser_definida_pela_tela(self):
+        self.request.side_effect = [
+            resposta_token(),
+            resposta_http(corpo={'statusCode': 200, 'data': {'count': 1}}),
+        ]
+
+        self.client.post(
+            self.url_teste,
+            self.dados(url_sso='https://atacante.example', url_api='https://atacante.example'),
+            format='json',
+        )
+
+        for chamada in self.request.call_args_list:
+            self.assertTrue(chamada.args[1].startswith('https://'))
+            self.assertIn('saude.gov.br', chamada.args[1])
+
+    def test_producao_usa_os_enderecos_do_manual(self):
+        self.request.side_effect = [
+            resposta_token(),
+            resposta_http(corpo={'statusCode': 200, 'data': {'count': 1}}),
+        ]
+
+        self.client.post(self.url_teste, self.dados(ambiente='producao'), format='json')
+
+        token, contagem = self.request.call_args_list
+        self.assertTrue(token.args[1].startswith('https://sso.saude.gov.br/'))
+        self.assertEqual(
+            contagem.args[1],
+            f'https://servicos-es.saude.gov.br/SISREG/{INDICE}/_count',
+        )
+
+    def test_testar_conexao_nao_salva(self):
+        self.request.side_effect = [
+            resposta_token(),
+            resposta_http(corpo={'statusCode': 200, 'data': {'count': 321}}),
+        ]
+
+        resposta = self.client.post(self.url_teste, self.dados(), format='json')
+
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(resposta.data, {'total': 321})
+        self.assertFalse(ConfiguracaoSisreg.objects.exists())
+
+    def test_testar_conexao_usa_segredo_salvo_quando_em_branco(self):
+        self.salvar()
+        self.request.side_effect = [
+            resposta_token(),
+            resposta_http(corpo={'statusCode': 200, 'data': {'count': 1}}),
+        ]
+
+        self.client.post(self.url_teste, self.dados(client_secret=''), format='json')
+
+        self.assertEqual(
+            self.request.call_args_list[0].kwargs['data']['client_secret'],
+            'segredo-da-tela',
+        )
+
+    def test_testar_conexao_exige_credencial_mesmo_desligada(self):
+        resposta = self.client.post(
+            self.url_teste,
+            self.dados(habilitado=False, client_secret=''),
+            format='json',
+        )
+
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('client_secret', resposta.data)
+        self.request.assert_not_called()
+
+    def test_teste_com_credencial_recusada_informa_o_erro(self):
+        self.request.return_value = resposta_http(401)
+
+        resposta = self.client.post(self.url_teste, self.dados(), format='json')
+
+        self.assertEqual(resposta.status_code, status.HTTP_502_BAD_GATEWAY)
+        self.assertEqual(
+            resposta.data['detail'],
+            'O SISREG recusou as credenciais configuradas.',
+        )
+
+    def test_trocar_a_credencial_gera_novo_token(self):
+        self.salvar()
+        self.request.side_effect = [resposta_token('token-1'), resposta_busca([])]
+        self.client.get(reverse('admin-sisreg-fila'))
+
+        self.salvar(client_secret='segredo-novo')
+        self.request.side_effect = [resposta_token('token-2'), resposta_busca([])]
+        self.client.get(reverse('admin-sisreg-fila'))
+
+        self.assertEqual(
+            self.request.call_args.kwargs['headers'],
+            {'SSOAuthorization': 'Bearer token-2'},
+        )
+
+    def test_mudanca_da_secret_key_pede_a_credencial_novamente(self):
+        self.salvar()
+
+        with override_settings(SECRET_KEY='outra-chave-outra-chave-outra-chave-123'):
+            self.assertIs(
+                self.client.get(self.url).data['client_secret_configurado'],
+                False,
+            )
+            resposta = self.client.get(reverse('admin-sisreg-fila'))
+
+        self.assertEqual(resposta.status_code, status.HTTP_502_BAD_GATEWAY)
+        self.assertEqual(
+            resposta.data['detail'],
+            'Informe novamente a credencial do SISREG.',
+        )
+        self.request.assert_not_called()
+
+    def test_existe_uma_unica_configuracao(self):
+        self.salvar()
+        self.salvar(indice=f'{INDICE}-2')
+
+        self.assertEqual(ConfiguracaoSisreg.objects.count(), 1)

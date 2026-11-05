@@ -265,9 +265,9 @@ não altera a fila vigente.
 
 A aplicação pode obter a fila de regulação ambulatorial diretamente da
 [API SISREG](https://portalservicos-datasus.saude.gov.br/portfolio/NSsGTvxYk0) do
-DATASUS, como alternativa ao PDF. O recurso vem desligado: sem
-`SISREG_ENABLED=True`, nenhuma chamada externa é feita, o item não aparece no
-menu e a publicação por PDF continua funcionando normalmente.
+DATASUS, como alternativa ao PDF. O recurso vem desligado: enquanto não for
+ativado, nenhuma chamada externa é feita e a publicação por PDF continua
+funcionando normalmente.
 
 ### Credencial
 
@@ -277,29 +277,33 @@ assinado pelo gestor, conforme o Manual de Integração da API SISREG v3.0,
 disponível na mesma página. Após a aprovação, o Portal informa o Client ID (CNES
 do estabelecimento), o Client Secret e os índices liberados.
 
-Configure o `.env` do backend:
+### Configuração
 
-```env
-SISREG_ENABLED=True
-SISREG_AMBIENTE=homologacao
-SISREG_CLIENT_ID=1234567
-SISREG_CLIENT_SECRET=valor_obtido_no_portal
-SISREG_INDICE=solicitacao-ambulatorial-es-vitoria
-SISREG_CENTRAIS_REGULADORAS=32C164,32C206
-```
+A integração é configurada pela tela `/dashboard/sisreg`, sem editar arquivos do
+servidor. Somente superusuários veem o formulário, que recebe ambiente, Client
+ID, Client Secret, índice e, opcionalmente, centrais reguladoras. O botão
+**Testar conexão** valida os dados na API antes de salvar, e a opção
+**Integração ativa** liga ou desliga o recurso.
 
-Use `SISREG_AMBIENTE=producao` somente depois de validar a integração em
-homologação. `SISREG_CENTRAIS_REGULADORAS` é opcional e limita a consulta às
-centrais informadas. Com o recurso ligado, o backend não inicia se a configuração
-estiver incompleta. O `client_secret` fica somente no ambiente do backend e nunca
-é enviado ao navegador.
+Use homologação até validar a integração. Os endereços de cada ambiente ficam
+fixos em `SISREG_AMBIENTES`, no backend, para que a tela não possa enviar a
+credencial a outro servidor.
+
+O Client Secret é gravado criptografado no banco, com uma chave derivada da
+`SECRET_KEY`, e nunca é devolvido ao navegador. Se a `SECRET_KEY` mudar, a tela
+pede que ele seja informado novamente. Em produção, sirva o sistema por HTTPS,
+pois o valor trafega do navegador até o backend ao ser salvo.
 
 ### Uso
 
-Funcionários com `is_staff=True` acessam a área em `/dashboard/sisreg`:
+Com a integração ativa, funcionários com `is_staff=True` usam a mesma tela. As
+rotas `configuracao/` exigem superusuário:
 
 ```text
 GET  /api/admin/sisreg/status/
+GET  /api/admin/sisreg/configuracao/
+PUT  /api/admin/sisreg/configuracao/
+POST /api/admin/sisreg/configuracao/testar/
 GET  /api/admin/sisreg/grupos/
 GET  /api/admin/sisreg/fila/?grupo=0701001&pagina=1
 POST /api/admin/sisreg/importar/
@@ -328,6 +332,31 @@ consultas e as características locais com a área negocial. A "Prioridade 0"
 (emergência) do SISREG é publicada como `Prioridade 1`, pois a FTC possui três
 níveis. A integração cobre apenas solicitações ambulatoriais: o índice
 `solicitacao-hospitalar` não é consultado.
+
+## Link público para o Portal da Transparência
+
+A página `/transparencia` é pública, não exige login e pode ser usada como link
+direto ou incorporada no portal da prefeitura. O painel administrativo mostra o
+link e o código `<iframe>` prontos para copiar. O nome exibido vem de
+`NEXT_PUBLIC_PREFEITURA_NOME`, no `.env` do frontend.
+
+A página mostra pessoas aguardando, especialidades com fila, espera média e maior
+espera, com totais por tipo, prioridade, situação e especialidade. Os números
+consideram somente solicitações ativas da publicação mais recente de cada
+especialidade e são atualizados a cada 5 minutos, sem nenhum dado pessoal:
+
+```text
+GET  /api/transparencia/indicadores/
+POST /api/transparencia/posicao/
+```
+
+A consulta de posição pede o código da solicitação e o ano de nascimento, e não
+devolve nome, CPF ou CNS. Solicitações sem ano de nascimento não são encontradas.
+O limite padrão é `TRANSPARENCIA_POSICAO_THROTTLE_RATE=30/minute`.
+
+Em produção, informe em `DRF_NUM_PROXIES` quantos proxies confiáveis ficam à
+frente da aplicação. Sem isso, os limites por IP podem ser burlados com um
+`X-Forwarded-For` forjado, ou os visitantes podem acabar dividindo o mesmo limite.
 
 ## Acesso do cidadão
 

@@ -10,7 +10,10 @@ from .sisreg import (
     consultar_fila_sisreg,
     importar_fila_sisreg,
     listar_grupos_sisreg,
+    testar_conexao_sisreg,
 )
+
+from .transparencia import consultar_posicao, obter_indicadores
 
 __all__ = [
     'ErroImportacaoPDF',
@@ -19,7 +22,10 @@ __all__ = [
     'ResultadoAtualizacaoFila',
     'atualizar_fila_por_pdf',
     'consultar_fila_sisreg',
+    'consultar_posicao',
     'extrair_registros_pdf',
     'importar_fila_sisreg',
     'listar_grupos_sisreg',
+    'obter_indicadores',
+    'testar_conexao_sisreg',
 ]

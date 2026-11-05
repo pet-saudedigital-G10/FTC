@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const navLinks = [
   { label: "Início", href: "/" },
   { label: "Fila Pública", href: "/fila-publica" },
+  { label: "Transparência", href: "/transparencia" },
   { label: "Acesso cidadão", href: "/login" },
   { label: "Acesso administrativo", href: "/admin/login" },
 ];

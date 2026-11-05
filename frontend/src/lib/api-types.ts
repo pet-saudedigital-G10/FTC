@@ -73,6 +73,21 @@ export type SisregStatus = {
   habilitado: boolean;
   ambiente: string | null;
   indice: string | null;
+  pode_configurar: boolean;
+};
+
+export type SisregConfiguracao = {
+  habilitado: boolean;
+  ambiente: string;
+  client_id: string;
+  indice: string;
+  centrais_reguladoras: string[];
+  client_secret_configurado: boolean;
+  atualizado_em: string | null;
+};
+
+export type SisregTesteConexao = {
+  total: number;
 };
 
 export type SisregGrupo = {
@@ -115,4 +130,45 @@ export type PublicacaoImportada = {
   publicacoes_substituidas: number[];
   importado_em: string;
   publicada_em: string;
+};
+
+export type TransparenciaContagem = {
+  valor: string | number;
+  rotulo: string;
+  total: number;
+};
+
+export type TransparenciaEspecialidade = {
+  nome: string;
+  tipo: string;
+  total: number;
+  espera_media_dias: number | null;
+  maior_espera_dias: number;
+};
+
+export type TransparenciaIndicadores = {
+  atualizado_em: string | null;
+  total_aguardando: number;
+  especialidades_com_fila: number;
+  espera_media_dias: number | null;
+  maior_espera_dias: number;
+  por_tipo: TransparenciaContagem[];
+  por_prioridade: TransparenciaContagem[];
+  por_situacao: TransparenciaContagem[];
+  especialidades: TransparenciaEspecialidade[];
+};
+
+export type TransparenciaPosicao = {
+  encontrado: boolean;
+  filas: {
+    especialidade: string;
+    tipo: string;
+    posicao: number;
+    total_aguardando: number;
+    situacao: string;
+    prioridade: string;
+    data_solicitacao: string;
+    dias_espera: number;
+    atualizado_em: string | null;
+  }[];
 };

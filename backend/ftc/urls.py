@@ -16,10 +16,14 @@ from .views import (
     FilaOpcoesView,
     RegistroFilaListView,
     PacienteListView,
+    SisregConfiguracaoView,
     SisregFilaView,
     SisregGruposView,
     SisregImportacaoView,
     SisregStatusView,
+    SisregTesteConexaoView,
+    TransparenciaIndicadoresView,
+    TransparenciaPosicaoView,
 )
 
 from ftc.views.fila import ConsultaPosicaoFilaAPIView
@@ -34,6 +38,16 @@ urlpatterns = [
         'admin/sisreg/status/',
         SisregStatusView.as_view(),
         name='admin-sisreg-status',
+    ),
+    path(
+        'admin/sisreg/configuracao/',
+        SisregConfiguracaoView.as_view(),
+        name='admin-sisreg-configuracao',
+    ),
+    path(
+        'admin/sisreg/configuracao/testar/',
+        SisregTesteConexaoView.as_view(),
+        name='admin-sisreg-testar',
     ),
     path(
         'admin/sisreg/grupos/',
@@ -87,6 +101,16 @@ urlpatterns = [
         'filas/posicao/',
         ConsultaPosicaoFilaAPIView.as_view(),
         name='fila-posicao',
+    ),
+    path(
+        'transparencia/indicadores/',
+        TransparenciaIndicadoresView.as_view(),
+        name='transparencia-indicadores',
+    ),
+    path(
+        'transparencia/posicao/',
+        TransparenciaPosicaoView.as_view(),
+        name='transparencia-posicao',
     ),
     path(
         'pacientes/',

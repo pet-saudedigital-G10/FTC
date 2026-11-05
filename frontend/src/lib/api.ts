@@ -27,7 +27,13 @@ function normalizePath(path: string) {
 }
 
 function browserStorage() {
-  return typeof window === "undefined" ? null : window.localStorage;
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage;
+  } catch {
+    // Browsers may block storage when the page is embedded in another site.
+    return null;
+  }
 }
 
 function authToken() {

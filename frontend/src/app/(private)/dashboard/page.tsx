@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { RefreshCw } from "lucide-react";
+import { TransparenciaLinkCard } from "@/components/transparencia-link-card";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { apiRoutes } from "@/lib/api-routes";
@@ -254,6 +255,8 @@ export default function DashboardPage() {
           </div>
         )}
       </section>
+
+      <TransparenciaLinkCard />
     </div>
   );
 }

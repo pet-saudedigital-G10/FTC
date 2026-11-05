@@ -33,7 +33,7 @@ const sisregItem = {
 
 export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
-  const [sisregEnabled, setSisregEnabled] = useState(false);
+  const [showSisreg, setShowSisreg] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -42,7 +42,7 @@ export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
         const status = await apiFetch<SisregStatus>(apiRoutes.sisregStatus, {
           cache: "no-store",
         });
-        if (active) setSisregEnabled(status.habilitado);
+        if (active) setShowSisreg(status.habilitado || status.pode_configurar);
       } catch {
         // The optional item stays hidden when the status is unavailable.
       }
@@ -53,7 +53,7 @@ export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
     };
   }, []);
 
-  const menuItems = sisregEnabled ? [...items, sisregItem] : items;
+  const menuItems = showSisreg ? [...items, sisregItem] : items;
 
   return (
     <Sidebar {...props}>

@@ -24,11 +24,20 @@ from .fila import (
     RegistroFilaPublicSerializer,
 )
 from .sisreg import (
+    SisregConfiguracaoSerializer,
     SisregFilaFiltroSerializer,
     SisregFilaRespostaSerializer,
     SisregGruposRespostaSerializer,
     SisregImportacaoSerializer,
     SisregStatusSerializer,
+    SisregTesteConexaoSerializer,
+    SisregTesteRespostaSerializer,
+)
+
+from .transparencia import (
+    TransparenciaIndicadoresSerializer,
+    TransparenciaPosicaoRespostaSerializer,
+    TransparenciaPosicaoSerializer,
 )
 
 __all__ = [
@@ -53,9 +62,15 @@ __all__ = [
     'FiltroOpcaoSerializer',
     'RegistroFilaSerializer',
     'RegistroFilaPublicSerializer',
+    'SisregConfiguracaoSerializer',
     'SisregFilaFiltroSerializer',
     'SisregFilaRespostaSerializer',
     'SisregGruposRespostaSerializer',
     'SisregImportacaoSerializer',
     'SisregStatusSerializer',
+    'SisregTesteConexaoSerializer',
+    'SisregTesteRespostaSerializer',
+    'TransparenciaIndicadoresSerializer',
+    'TransparenciaPosicaoRespostaSerializer',
+    'TransparenciaPosicaoSerializer',
 ]

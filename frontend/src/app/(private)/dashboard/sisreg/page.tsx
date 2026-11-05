@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { apiRoutes } from "@/lib/api-routes";
@@ -12,6 +12,7 @@ import type {
   SisregGrupos,
   SisregStatus,
 } from "@/lib/api-types";
+import { SisregConfigForm } from "./subcomponents/SisregConfigForm";
 
 const ambientes: Record<string, string> = {
   homologacao: "Homologação",
@@ -29,6 +30,8 @@ function errorMessage(error: unknown, fallback: string) {
 export default function SisregPage() {
   const [status, setStatus] = useState<SisregStatus | null>(null);
   const [statusError, setStatusError] = useState("");
+  const [showConfig, setShowConfig] = useState(false);
+  const [configVersion, setConfigVersion] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -50,18 +53,30 @@ export default function SisregPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [configVersion]);
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-      <div>
-        <p className="text-sm font-medium text-[#004080]">Integração opcional</p>
-        <h1 className="text-2xl font-semibold tracking-tight text-[#002A58]">
-          Fila de regulação do SISREG
-        </h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Consulte a fila ambulatorial na API do DATASUS e publique-a na Fila Transparente.
-        </p>
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+        <div>
+          <p className="text-sm font-medium text-[#004080]">Integração opcional</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-[#002A58]">
+            Fila de regulação do SISREG
+          </h1>
+          <p className="mt-1 text-sm text-slate-600">
+            Consulte a fila ambulatorial na API do DATASUS e publique-a na Fila Transparente.
+          </p>
+        </div>
+        {status?.pode_configurar && status.habilitado && (
+          <Button
+            variant="outline"
+            onClick={() => setShowConfig((value) => !value)}
+            className="gap-2"
+          >
+            <Settings className="h-4 w-4" />
+            {showConfig ? "Ocultar configuração" : "Configurar integração"}
+          </Button>
+        )}
       </div>
 
       {statusError ? (
@@ -70,19 +85,38 @@ export default function SisregPage() {
         </p>
       ) : !status ? (
         <p className="text-sm text-slate-500">Verificando a integração...</p>
-      ) : status.habilitado ? (
-        <SisregPanel status={status} />
       ) : (
-        <section className="rounded-xl border bg-white p-6 shadow-sm">
-          <h2 className="font-semibold text-[#002A58]">Integração não habilitada</h2>
-          <p className="mt-2 max-w-3xl text-sm text-slate-600">
-            O uso do SISREG é opcional. A publicação da fila por PDF continua funcionando
-            sem ele. Para habilitar, solicite a credencial da API SISREG no Portal de
-            Serviços do DATASUS e informe <code>SISREG_ENABLED</code>,{" "}
-            <code>SISREG_CLIENT_ID</code>, <code>SISREG_CLIENT_SECRET</code> e{" "}
-            <code>SISREG_INDICE</code> no ambiente do backend.
-          </p>
-        </section>
+        <>
+          {status.pode_configurar && (showConfig || !status.habilitado) && (
+            <section className="rounded-xl border bg-white p-5 shadow-sm">
+              <h2 className="mb-3 font-semibold text-[#002A58]">
+                Configuração da integração
+              </h2>
+              <SisregConfigForm
+                onSaved={() => {
+                  setShowConfig(true);
+                  setConfigVersion((value) => value + 1);
+                }}
+              />
+            </section>
+          )}
+          {status.habilitado ? (
+            <SisregPanel key={configVersion} status={status} />
+          ) : (
+            !status.pode_configurar && (
+              <section className="rounded-xl border bg-white p-6 shadow-sm">
+                <h2 className="font-semibold text-[#002A58]">
+                  Integração não habilitada
+                </h2>
+                <p className="mt-2 max-w-3xl text-sm text-slate-600">
+                  O uso do SISREG é opcional e a publicação por PDF continua funcionando
+                  sem ele. Para habilitar, peça a um superadministrador que informe a
+                  credencial nesta tela.
+                </p>
+              </section>
+            )
+          )}
+        </>
       )}
     </div>
   );

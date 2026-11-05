@@ -15,12 +15,8 @@ SITUACOES_ATIVAS = (
 )
 
 
-def get_posicoes_paciente_ativas(*, cpf: str) -> QuerySet[RegistroFila]:
-    try:
-        paciente = Paciente.objects.get(cpf=cpf)
-    except Paciente.DoesNotExist:
-        return RegistroFila.objects.none()
-
+def get_registros_vigentes() -> QuerySet[RegistroFila]:
+    """Registros ativos da publicacao mais recente de cada especialidade."""
     publicacao_mais_recente = (
         PublicacaoFila.objects
         .filter(
@@ -32,7 +28,19 @@ def get_posicoes_paciente_ativas(*, cpf: str) -> QuerySet[RegistroFila]:
     )
 
     return RegistroFila.objects.filter(
-        paciente=paciente,
         publicacao_id=Subquery(publicacao_mais_recente),
         situacao__in=SITUACOES_ATIVAS,
-    ).select_related('paciente', 'publicacao__especialidade')
+    )
+
+
+def get_posicoes_paciente_ativas(*, cpf: str) -> QuerySet[RegistroFila]:
+    try:
+        paciente = Paciente.objects.get(cpf=cpf)
+    except Paciente.DoesNotExist:
+        return RegistroFila.objects.none()
+
+    return (
+        get_registros_vigentes()
+        .filter(paciente=paciente)
+        .select_related('paciente', 'publicacao__especialidade')
+    )
