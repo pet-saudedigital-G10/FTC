@@ -12,6 +12,7 @@ from django.db.models import Max
 from django.utils import timezone
 
 from ftc.models import Especialidade, PublicacaoFila, RegistroFila
+from ftc.utils.masking import mask_cns, mask_name
 
 
 logger = logging.getLogger(__name__)
@@ -40,7 +41,17 @@ def _somente_digitos(valor):
 
 
 def _mascarar_nome(valor):
-    partes = re.findall(r"[A-Za-zÀ-ÖØ-öø-ÿ*]+", str(valor or '').strip())
+    texto = str(valor or '').strip()
+    if not texto:
+        raise ErroImportacaoPDF('O PDF possui um registro sem nome de usuario.')
+
+    # Se for um nome regular completo (sem asteriscos e sem iniciais isoladas), aplica o mask_name central
+    if '*' not in texto and not re.search(r'\b[A-Za-zÀ-ÖØ-öø-ÿ]\b', texto):
+        mascarado = mask_name(texto)
+        if mascarado:
+            return mascarado
+
+    partes = re.findall(r"[A-Za-zÀ-ÖØ-öø-ÿ*]+", texto)
     if not partes:
         raise ErroImportacaoPDF('O PDF possui um registro sem nome de usuario.')
 
@@ -51,11 +62,15 @@ def _mascarar_nome(valor):
         elif len(parte) == 1:
             mascaradas.append(f'{parte.upper()}.')
         else:
-            mascaradas.append(f'{parte[0].upper()}{"*" * (len(parte) - 1)}')
+            mascaradas.append(mask_name(parte).upper())
     return ' '.join(mascaradas)
 
 
 def _mascarar_cns(valor):
+    mascarado = mask_cns(valor)
+    if mascarado:
+        return mascarado
+
     digitos = _somente_digitos(valor)
     if len(digitos) < 4:
         raise ErroImportacaoPDF('O PDF possui um registro com CNS invalido.')

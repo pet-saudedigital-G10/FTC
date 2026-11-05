@@ -12,6 +12,7 @@ from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from ftc.models import Paciente
+from ftc.utils.masking import mask_cns, mask_cpf, mask_name
 
 ADMIN_AUTH_ERROR = 'Credenciais invalidas ou usuario sem permissao administrativa.'
 CIDADAO_AUTH_ERROR = 'CPF ou senha invalidos, ou cadastro sem paciente vinculado.'
@@ -82,6 +83,75 @@ class AdminUserCreateSerializer(serializers.ModelSerializer):
             is_active=True,
             is_staff=True,
             is_superuser=False,
+        )
+
+
+class CidadaoUserCreateSerializer(serializers.Serializer):
+    cpf = serializers.CharField(min_length=11, max_length=11)
+    cns = serializers.CharField(min_length=15, max_length=15, write_only=True)
+    password = serializers.CharField(
+        write_only=True,
+        trim_whitespace=False,
+        style={'input_type': 'password'},
+    )
+    password_confirmation = serializers.CharField(
+        write_only=True,
+        trim_whitespace=False,
+        style={'input_type': 'password'},
+    )
+
+    def validate(self, attrs):
+        cpf = attrs['cpf']
+        cns = attrs['cns']
+
+        if not cpf.isdigit():
+            raise serializers.ValidationError({
+                'cpf': 'Informe o CPF com exatamente 11 digitos.',
+            })
+        if not cns.isdigit():
+            raise serializers.ValidationError({
+                'cns': 'Informe o CNS com exatamente 15 digitos.',
+            })
+        if attrs['password'] != attrs['password_confirmation']:
+            raise serializers.ValidationError({
+                'password_confirmation': 'As senhas nao conferem.',
+            })
+
+        try:
+            paciente = Paciente.objects.get(cpf=cpf, cns=cns)
+        except Paciente.DoesNotExist as exc:
+            raise serializers.ValidationError(
+                'CPF e CNS nao correspondem a um paciente cadastrado.'
+            ) from exc
+
+        User = get_user_model()
+        if User.objects.filter(username=cpf).exists():
+            raise serializers.ValidationError({
+                'cpf': 'Ja existe uma conta cadastrada para este CPF.',
+            })
+
+        candidate = User(username=cpf)
+        try:
+            validate_password(attrs['password'], user=candidate)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(
+                {'password': list(exc.messages)}
+            ) from exc
+
+        attrs['paciente'] = paciente
+        return attrs
+
+    def create(self, validated_data):
+        validated_data.pop('password_confirmation')
+        validated_data.pop('paciente')
+        validated_data.pop('cns')
+        cpf = validated_data.pop('cpf')
+        return get_user_model().objects.create_user(
+            username=cpf,
+            is_active=True,
+            is_staff=False,
+            is_superuser=False,
+            **validated_data,
         )
 
 
@@ -286,27 +356,14 @@ class PacienteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Paciente
-        fields = '__all__'
+        fields = ('cpf', 'cns', 'nome_completo')
 
     def get_cpf(self, obj: Paciente) -> str:
-        return self._mascarar_documento(obj.cpf)
+        return mask_cpf(obj.cpf)
 
     def get_cns(self, obj: Paciente) -> str:
-        return self._mascarar_documento(obj.cns)
-
-    def _mascarar_documento(self, valor: str | None) -> str:
-        if not valor:
-            return ''
-        return f"{'*' * max(len(valor) - 4, 0)}{valor[-4:]}"
+        return mask_cns(obj.cns)
 
     def get_nome_completo(self, obj: Paciente) -> str:
-        partes = obj.nome_completo.split()
+        return mask_name(obj.nome_completo)
 
-        resultado = []
-
-        for parte in partes:
-            resultado.append(
-                parte[0] + "*" * (len(parte) - 1)
-            )
-
-        return " ".join(resultado)

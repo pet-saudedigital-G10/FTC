@@ -12,12 +12,13 @@ from .views import (
     CidadaoRegistroFilaListView,
     CidadaoTokenObtainPairView,
     CidadaoTokenRefreshView,
-    ConsultaPosicaoFilaAPIView,
     EspecialidadeListView,
     FilaOpcoesView,
     RegistroFilaListView,
     PacienteListView,
 )
+
+from ftc.views.fila import ConsultaPosicaoFilaAPIView
 
 urlpatterns = [
     path(
@@ -25,7 +26,6 @@ urlpatterns = [
         AtualizacaoFilaView.as_view(),
         name='admin-fila-atualizar',
     ),
-    path('consultar/', ConsultaPosicaoFilaAPIView.as_view(), name='consulta-fila'),
     path('admin/users/', AdminUserCreateView.as_view(), name='admin-user-create'),
     path('admin/auth/login/', AdminTokenObtainPairView.as_view(), name='admin-login'),
     path(
@@ -63,6 +63,11 @@ urlpatterns = [
         name='fila-especialidade-list',
     ),
     path('filas/opcoes/', FilaOpcoesView.as_view(), name='fila-opcoes'),
+    path(
+        'filas/posicao/',
+        ConsultaPosicaoFilaAPIView.as_view(),
+        name='fila-posicao',
+    ),
     path(
         'pacientes/',
         PacienteListView.as_view(),

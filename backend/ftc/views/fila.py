@@ -25,6 +25,8 @@ from ftc.services import ErroImportacaoPDF, atualizar_fila_por_pdf
 
 
 class ConsultaPosicaoFilaAPIView(APIView):
+    permission_classes = [AllowAny]
+
     def post(self, request):
         cpf = request.data.get('cpf')
 

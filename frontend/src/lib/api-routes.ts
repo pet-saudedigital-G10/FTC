@@ -16,11 +16,16 @@ export const apiRoutes = {
     "/api/filas/especialidades/",
   filaOpcoes:
     process.env.NEXT_PUBLIC_FILA_OPCOES_PATH ?? "/api/filas/opcoes/",
+  filaPosicao:
+    process.env.NEXT_PUBLIC_FILA_POSICAO_PATH ?? "/api/filas/posicao/",
   pacientes:
     process.env.NEXT_PUBLIC_PACIENTES_PATH ?? "/api/pacientes/",
 
   cidadaoLogin:
     process.env.NEXT_PUBLIC_CIDADAO_LOGIN_PATH ?? "/api/auth/cidadao/login/",
+  cidadaoRegister:
+    process.env.NEXT_PUBLIC_CIDADAO_REGISTER_PATH ??
+    "/api/auth/cidadao/register/",
   cidadaoRefresh:
     process.env.NEXT_PUBLIC_CIDADAO_REFRESH_PATH ??
     "/api/auth/cidadao/refresh/",

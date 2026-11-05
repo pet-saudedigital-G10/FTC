@@ -118,16 +118,25 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT'),
+db_engine = os.getenv('DB_ENGINE', 'django.db.backends.postgresql')
+if 'sqlite' in db_engine:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / os.getenv('DB_NAME', 'db.sqlite3'),
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': db_engine,
+            'NAME': os.getenv('DB_NAME'),
+            'USER': os.getenv('DB_USER'),
+            'PASSWORD': os.getenv('DB_PASSWORD'),
+            'HOST': os.getenv('DB_HOST'),
+            'PORT': os.getenv('DB_PORT'),
+        }
+    }
 
 
 # Password validation
@@ -195,6 +204,10 @@ REST_FRAMEWORK = {
         'user': os.getenv('DRF_USER_THROTTLE_RATE', '1000/hour'),
         'admin_login': os.getenv('ADMIN_LOGIN_THROTTLE_RATE', '5/minute'),
         'cidadao_login': os.getenv('CIDADAO_LOGIN_THROTTLE_RATE', '5/minute'),
+        'cidadao_registration': os.getenv(
+            'CIDADAO_REGISTRATION_THROTTLE_RATE',
+            '5/hour',
+        ),
         'token_refresh': os.getenv('TOKEN_REFRESH_THROTTLE_RATE', '10/minute'),
         'fila_importacao': os.getenv('FILA_IMPORT_THROTTLE_RATE', '10/hour'),
     },
