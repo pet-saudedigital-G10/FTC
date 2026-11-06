@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Search, Printer, SlidersHorizontal, FileText } from "lucide-react";
+import { Search, Printer, SlidersHorizontal } from "lucide-react";
 import { apiFetch, onlyDigits } from "@/lib/api";
 import { apiRoutes } from "@/lib/api-routes";
 import type { FilaOpcoes, RegistroFila } from "@/lib/api-types";
@@ -99,7 +99,7 @@ function FilterSelect({
 }) {
   return (
     <div className="flex flex-col gap-1 min-w-[160px]">
-      <label className="text-xs text-slate-500">{label}*</label>
+      <label className="text-xs text-slate-500">{label}</label>
       <div className="relative">
         <select
           value={value}
@@ -152,53 +152,28 @@ function HeroBanner() {
 // Individual tab
 // ---------------------------------------------------------------------------
 
-function gerarComprovante(filas: PosicaoResult["filas"]) {
-  const payload = {
-    filas,
-    emitido_em: new Date().toISOString(),
-    protocolo: `FTC-${Date.now().toString(36).toUpperCase()}`,
-  };
-  // localStorage é compartilhado entre abas da mesma origem (sessionStorage não é)
-  localStorage.setItem("comprovante_fila", JSON.stringify(payload));
-  window.open("/fila-publica/comprovante", "_blank");
-}
-
-function AbaIndividual({ opcoes }: { opcoes: FilaOpcoes | null }) {
-  const [tipo, setTipo] = useState("pendentes");
-  const [situacao, setSituacao] = useState("");
+function AbaIndividual() {
   const [busca, setBusca] = useState("");
   const [resultado, setResultado] = useState<PosicaoResult | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [error, setError] = useState("");
 
-  // Set default situacao when opcoes load
-  useEffect(() => {
-    if (opcoes?.situacoes?.length && !situacao) {
-      setSituacao(String(opcoes.situacoes[0].value));
-    }
-  }, [opcoes, situacao]);
-
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     setError("");
 
     const trimmed = busca.trim();
-    if (!trimmed) {
-      setError("Informe o CPF, CNS ou número do protocolo.");
+    const cpfDigits = onlyDigits(trimmed);
+    if (cpfDigits.length !== 11) {
+      setError("Informe um CPF válido com 11 dígitos.");
       return;
     }
-
-    const cpfDigits = onlyDigits(trimmed);
 
     setIsSearching(true);
     setHasSearched(false);
 
     try {
-      const params = new URLSearchParams();
-      if (tipo) params.set("tipo", tipo);
-      if (situacao) params.set("situacao", situacao);
-
       const data = await apiFetch<PosicaoResult>(
         `${apiRoutes.filaPosicao}`,
         {
@@ -219,9 +194,6 @@ function AbaIndividual({ opcoes }: { opcoes: FilaOpcoes | null }) {
     }
   }
 
-  const tiposOpcoes = opcoes?.tipos ?? [];
-  const situacoesOpcoes = opcoes?.situacoes ?? [];
-
   return (
     <div>
       {/* Filters */}
@@ -229,28 +201,20 @@ function AbaIndividual({ opcoes }: { opcoes: FilaOpcoes | null }) {
         onSubmit={handleSearch}
         className="flex flex-wrap items-end gap-3 px-6 py-5 border-b border-slate-100"
       >
-        <FilterSelect
-          label="Tipo"
-          value={tipo}
-          onChange={setTipo}
-          options={tiposOpcoes}
-          placeholder="Todos"
-        />
-        <FilterSelect
-          label="Situação"
-          value={situacao}
-          onChange={setSituacao}
-          options={situacoesOpcoes}
-          placeholder="Todas"
-        />
-        {/* CPF / CNS / protocolo input */}
+        {/* O endpoint público consulta exclusivamente pelo CPF. */}
         <div className="flex flex-col gap-1 flex-1 min-w-[220px]">
-          <label className="text-xs text-slate-500 invisible">Busca</label>
+          <label htmlFor="consulta-cpf" className="text-xs text-slate-500">
+            CPF
+          </label>
           <input
+            id="consulta-cpf"
             type="text"
             value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="CPF, CNS ou o número do protocolo*"
+            onChange={(e) => setBusca(formatCpf(e.target.value))}
+            placeholder="000.000.000-00"
+            inputMode="numeric"
+            autoComplete="off"
+            maxLength={14}
             className="rounded border border-slate-300 px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
           />
         </div>
@@ -298,8 +262,7 @@ function AbaIndividual({ opcoes }: { opcoes: FilaOpcoes | null }) {
 
         {hasSearched && resultado && (
           resultado.encontrado && resultado.filas.length > 0 ? (
-            <div>
-              <div className="overflow-x-auto">
+            <div className="overflow-x-auto">
                 <table className="w-full text-sm border-collapse">
                   <thead>
                     <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
@@ -345,19 +308,6 @@ function AbaIndividual({ opcoes }: { opcoes: FilaOpcoes | null }) {
                     ))}
                   </tbody>
                 </table>
-              </div>
-
-              {/* Botão gerar comprovante */}
-              <div className="mt-5 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => gerarComprovante(resultado.filas)}
-                  className="inline-flex items-center gap-2 rounded bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-800 transition-colors shadow-sm"
-                >
-                  <FileText className="h-4 w-4" />
-                  Gerar Comprovante
-                </button>
-              </div>
             </div>
           ) : (
             <EmptyState message="Nenhum registro encontrado para as informações informadas." />
@@ -381,16 +331,6 @@ function AbaListaGeral({ opcoes }: { opcoes: FilaOpcoes | null }) {
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [error, setError] = useState("");
-
-  // Set default situacao when opcoes load
-  useEffect(() => {
-    if (opcoes?.situacoes?.length && !situacao) {
-      setSituacao(String(opcoes.situacoes[0].value));
-    }
-    if (opcoes?.tipos?.length && !tipo) {
-      setTipo(String(opcoes.tipos[0].value));
-    }
-  }, [opcoes, situacao, tipo]);
 
   const handleSearch = useCallback(async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -441,7 +381,7 @@ function AbaListaGeral({ opcoes }: { opcoes: FilaOpcoes | null }) {
               type="text"
               value={especialidade}
               onChange={(e) => setEspecialidade(e.target.value)}
-              placeholder="Consulta ou exame*"
+              placeholder="Nome, slug ou ID da especialidade"
               className="w-full rounded border border-slate-300 px-3 py-2.5 pr-10 text-sm text-slate-800 placeholder-slate-400 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
             />
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
@@ -493,6 +433,8 @@ function AbaListaGeral({ opcoes }: { opcoes: FilaOpcoes | null }) {
             title="Limpar filtros"
             onClick={() => {
               setEspecialidade("");
+              setTipo("");
+              setSituacao("");
               setPrioridade("");
               setRegistros([]);
               setHasSearched(false);
@@ -636,7 +578,7 @@ export default function FilaPublicaPage() {
 
         {/* Tab content */}
         {aba === "individual" ? (
-          <AbaIndividual opcoes={opcoes} />
+          <AbaIndividual />
         ) : (
           <AbaListaGeral opcoes={opcoes} />
         )}

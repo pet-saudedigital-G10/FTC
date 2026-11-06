@@ -1,3 +1,8 @@
+const filaComprovanteBase = (
+  process.env.NEXT_PUBLIC_FILA_COMPROVANTE_BASE_PATH ??
+  "/api/filas/registros/"
+).replace(/\/?$/, "/");
+
 export const apiRoutes = {
   adminUsers:
     process.env.NEXT_PUBLIC_ADMIN_USERS_PATH ?? "/api/admin/users/",
@@ -18,6 +23,8 @@ export const apiRoutes = {
     process.env.NEXT_PUBLIC_FILA_OPCOES_PATH ?? "/api/filas/opcoes/",
   filaPosicao:
     process.env.NEXT_PUBLIC_FILA_POSICAO_PATH ?? "/api/filas/posicao/",
+  filaComprovante: (registroId: number) =>
+    `${filaComprovanteBase}${registroId}/comprovante/`,
   pacientes:
     process.env.NEXT_PUBLIC_PACIENTES_PATH ?? "/api/pacientes/",
 

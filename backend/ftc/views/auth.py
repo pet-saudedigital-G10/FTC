@@ -15,6 +15,7 @@ from ftc.serializers import (
     AdminTokenResponseSerializer,
     AdminUserCreateSerializer,
     AdminUserSerializer,
+    CidadaoUserCreateSerializer,
     CidadaoTokenObtainPairSerializer,
     CidadaoTokenRefreshResponseSerializer,
     CidadaoTokenRefreshSerializer,
@@ -69,6 +70,33 @@ class AdminUserCreateView(CreateAPIView):
             AdminUserSerializer(user).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+class CidadaoUserCreateView(CreateAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = CidadaoUserCreateSerializer
+    throttle_scope = 'cidadao_registration'
+
+    @extend_schema(
+        tags=['Cidadao Auth'],
+        summary='Cadastrar conta de cidadao',
+        description=(
+            'Cria uma conta nao administrativa para um paciente previamente '
+            'cadastrado, depois de validar CPF e CNS.'
+        ),
+        responses={status.HTTP_201_CREATED: CidadaoUserSerializer},
+    )
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        paciente = Paciente.objects.get(cpf=user.get_username())
+        response = CidadaoUserSerializer({
+            'id': user.pk,
+            'cpf': paciente.cpf,
+            'nome_completo': paciente.nome_completo,
+        })
+        return Response(response.data, status=status.HTTP_201_CREATED)
 
 
 class AdminTokenObtainPairView(TokenObtainPairView):

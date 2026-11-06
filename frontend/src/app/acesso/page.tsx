@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { LogOut } from "lucide-react";
+import { FileText, LogOut } from "lucide-react";
 import { Logo } from "@/components/shared/header/subcomponents/Logo";
 import { apiRoutes } from "@/lib/api-routes";
 import {
@@ -12,7 +12,21 @@ import {
   hasAuthSession,
   logout,
 } from "@/lib/api";
-import type { CidadaoUser, RegistroFila } from "@/lib/api-types";
+import type {
+  CidadaoUser,
+  RegistroFila,
+  RegistroFilaComprovante,
+} from "@/lib/api-types";
+
+const SITUACOES_COM_COMPROVANTE = new Set([
+  "SOLICITADO",
+  "AGUARDANDO_REGULACAO",
+  "PENDENTE",
+  "REENVIADO",
+  "AGUARDANDO_TRANSPORTE",
+  "SOLICITADO_CRL",
+  "AGUARDANDO_LEITO",
+]);
 
 function formatCpf(value: string) {
   return value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
@@ -28,7 +42,11 @@ export default function AcessoCidadaoPage() {
   const [registros, setRegistros] = useState<RegistroFila[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [actionError, setActionError] = useState("");
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [generatingReceiptId, setGeneratingReceiptId] = useState<number | null>(
+    null,
+  );
 
   useEffect(() => {
     let active = true;
@@ -83,6 +101,51 @@ export default function AcessoCidadaoPage() {
     }
   }
 
+  async function handleReceipt(registro: RegistroFila) {
+    setActionError("");
+    setGeneratingReceiptId(registro.id);
+
+    try {
+      const comprovante = await apiFetch<RegistroFilaComprovante>(
+        apiRoutes.filaComprovante(registro.id),
+        { cache: "no-store" },
+      );
+
+      localStorage.setItem(
+        "comprovante_fila",
+        JSON.stringify({
+          filas: [
+            {
+              posicao: comprovante.posicao,
+              prioridade: comprovante.prioridade,
+              prioridade_display: comprovante.prioridade_display,
+              situacao: comprovante.situacao,
+              situacao_display: comprovante.situacao_display,
+              especialidade: comprovante.especialidade_nome,
+              tipo_especialidade: comprovante.especialidade_tipo_display,
+              competencia: comprovante.competencia,
+              nome_mascarado: comprovante.nome_mascarado,
+              data_solicitacao: comprovante.data_solicitacao,
+            },
+          ],
+          emitido_em: comprovante.emitido_em,
+          protocolo: comprovante.codigo_solicitacao,
+          sistema: comprovante.sistema,
+          orientacao: comprovante.orientacao,
+        }),
+      );
+      router.push("/fila-publica/comprovante");
+    } catch (requestError) {
+      setActionError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Não foi possível gerar o comprovante.",
+      );
+    } finally {
+      setGeneratingReceiptId(null);
+    }
+  }
+
   if (loading) {
     return <main className="grid min-h-screen place-items-center bg-slate-50 text-sm text-slate-600">Carregando seus dados...</main>;
   }
@@ -132,6 +195,14 @@ export default function AcessoCidadaoPage() {
                 </p>
               ) : (
                 <div className="grid gap-4 p-5 md:grid-cols-2">
+                  {actionError && (
+                    <p
+                      className="md:col-span-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+                      role="alert"
+                    >
+                      {actionError}
+                    </p>
+                  )}
                   {registros.map((registro) => (
                     <article key={registro.id} className="rounded-lg border border-slate-200 p-4">
                       <div className="flex items-start justify-between gap-3">
@@ -161,6 +232,20 @@ export default function AcessoCidadaoPage() {
                           <dd className="text-slate-800">{formatDate(registro.data_solicitacao)}</dd>
                         </div>
                       </dl>
+                      {SITUACOES_COM_COMPROVANTE.has(registro.situacao) &&
+                        registro.posicao >= 1 && (
+                          <button
+                            type="button"
+                            onClick={() => void handleReceipt(registro)}
+                            disabled={generatingReceiptId !== null}
+                            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#004080] px-3 py-2 text-sm font-medium text-white hover:bg-[#002A58] disabled:cursor-wait disabled:opacity-60"
+                          >
+                            <FileText className="h-4 w-4" />
+                            {generatingReceiptId === registro.id
+                              ? "Gerando comprovante..."
+                              : "Gerar comprovante"}
+                          </button>
+                        )}
                     </article>
                   ))}
                 </div>
