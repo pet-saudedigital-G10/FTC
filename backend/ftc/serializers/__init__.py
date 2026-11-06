@@ -20,8 +20,11 @@ from .fila import (
     EspecialidadeSerializer,
     FilaOpcoesSerializer,
     FiltroOpcaoSerializer,
+    ORIENTACAO_COMPROVANTE_POSICAO,
+    RegistroFilaComprovanteSerializer,
     RegistroFilaSerializer,
     RegistroFilaPublicSerializer,
+    SISTEMA_IDENTIFICACAO_FTC,
 )
 
 __all__ = [
@@ -44,6 +47,9 @@ __all__ = [
     'EspecialidadeSerializer',
     'FilaOpcoesSerializer',
     'FiltroOpcaoSerializer',
+    'ORIENTACAO_COMPROVANTE_POSICAO',
+    'RegistroFilaComprovanteSerializer',
     'RegistroFilaSerializer',
     'RegistroFilaPublicSerializer',
+    'SISTEMA_IDENTIFICACAO_FTC',
 ]

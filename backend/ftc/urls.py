@@ -14,6 +14,7 @@ from .views import (
     CidadaoTokenRefreshView,
     EspecialidadeListView,
     FilaOpcoesView,
+    RegistroFilaComprovanteView,
     RegistroFilaListView,
     PacienteListView,
 )
@@ -57,6 +58,11 @@ urlpatterns = [
         name='cidadao-filas',
     ),
     path('filas/registros/', RegistroFilaListView.as_view(), name='fila-registro-list'),
+    path(
+        'filas/registros/<int:pk>/comprovante/',
+        RegistroFilaComprovanteView.as_view(),
+        name='fila-registro-comprovante',
+    ),
     path(
         'filas/especialidades/',
         EspecialidadeListView.as_view(),

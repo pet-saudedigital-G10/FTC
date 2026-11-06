@@ -1,9 +1,19 @@
 from datetime import datetime
 
 from django.conf import settings
+from django.utils import timezone
 from rest_framework import serializers
 
 from ftc.models import Especialidade, PublicacaoFila, RegistroFila
+from ftc.utils.masking import mask_cns, mask_cpf, mask_name
+
+
+SISTEMA_IDENTIFICACAO_FTC = 'Fila Transparente Cidadã (FTC)'
+ORIENTACAO_COMPROVANTE_POSICAO = (
+    'A posição apresentada corresponde à publicação identificada neste comprovante. '
+    'A ordem de atendimento poderá sofrer alterações em razão de novas solicitações, '
+    'critérios de prioridade clínica e movimentações da regulação.'
+)
 
 
 class RegistroFilaPublicSerializer(serializers.ModelSerializer):
@@ -108,6 +118,47 @@ class RegistroFilaSerializer(serializers.ModelSerializer):
             'situacao_display',
         )
         read_only_fields = fields
+
+
+class RegistroFilaComprovanteSerializer(RegistroFilaSerializer):
+    sistema = serializers.SerializerMethodField()
+    nome_mascarado = serializers.SerializerMethodField()
+    cpf_mascarado = serializers.SerializerMethodField()
+    cns_mascarado = serializers.SerializerMethodField()
+    emitido_em = serializers.SerializerMethodField()
+    orientacao = serializers.SerializerMethodField()
+
+    class Meta(RegistroFilaSerializer.Meta):
+        fields = (
+            ('sistema',)
+            + RegistroFilaSerializer.Meta.fields
+            + ('emitido_em', 'orientacao')
+        )
+        read_only_fields = fields
+
+    def get_sistema(self, obj: RegistroFila) -> str:
+        return SISTEMA_IDENTIFICACAO_FTC
+
+    def get_nome_mascarado(self, obj: RegistroFila) -> str:
+        if obj.paciente and obj.paciente.nome_completo:
+            return mask_name(obj.paciente.nome_completo)
+        return mask_name(obj.nome_mascarado)
+
+    def get_cpf_mascarado(self, obj: RegistroFila) -> str:
+        if obj.paciente and obj.paciente.cpf:
+            return mask_cpf(obj.paciente.cpf)
+        return mask_cpf(obj.cpf_mascarado) or obj.cpf_mascarado
+
+    def get_cns_mascarado(self, obj: RegistroFila) -> str:
+        if obj.paciente and obj.paciente.cns:
+            return mask_cns(obj.paciente.cns)
+        return mask_cns(obj.cns_mascarado) or obj.cns_mascarado
+
+    def get_emitido_em(self, obj: RegistroFila):
+        return timezone.now()
+
+    def get_orientacao(self, obj: RegistroFila) -> str:
+        return ORIENTACAO_COMPROVANTE_POSICAO
 
 
 class FiltroOpcaoSerializer(serializers.Serializer):
