@@ -31,7 +31,7 @@ def get_posicoes_paciente_ativas(*, cpf: str) -> QuerySet[RegistroFila]:
         .values('pk')[:1]
     )
 
-    return RegistroFila.objects.filter(
+    return RegistroFila.objects.visiveis().filter(
         paciente=paciente,
         publicacao_id=Subquery(publicacao_mais_recente),
         situacao__in=SITUACOES_ATIVAS,

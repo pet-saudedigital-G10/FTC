@@ -63,6 +63,9 @@ class Paciente(models.Model):
     def __str__(self):
         return self.nome_completo or f'Paciente {self.pk}'
 
+class EspecialidadeManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(ativo=True)
 
 class Especialidade(models.Model):
     class Tipo(models.TextChoices):
@@ -77,6 +80,8 @@ class Especialidade(models.Model):
         default=Tipo.CONSULTA,
     )
     ativo = models.BooleanField(default=True)
+    objects = EspecialidadeManager()
+    all_objects = models.Manager()
 
     class Meta:
         db_table = 'especialidades'
@@ -134,6 +139,15 @@ class PublicacaoFila(models.Model):
     publicada_em = models.DateTimeField(null=True, blank=True)
     observacao = models.TextField(blank=True)
 
+    inativado_em = models.DateTimeField(null=True, blank=True)
+    inativado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+    motivo_inativacao = models.TextField(blank=True)
+
     class Meta:
         db_table = 'publicacoes_fila'
         verbose_name = 'Publicacao da fila'
@@ -157,6 +171,9 @@ class PublicacaoFila(models.Model):
             f'{self.competencia:%m/%Y} - v{self.versao}'
         )
 
+class RegistroFilaManager(models.Manager):
+    def visiveis(self):
+        return self.get_queryset().filter(inativado_em__isnull=True)    
 
 class RegistroFila(models.Model):
     class Prioridade(models.IntegerChoices):
@@ -228,6 +245,16 @@ class RegistroFila(models.Model):
         verbose_name='Situação',
     )
     criado_em = models.DateTimeField(auto_now_add=True)
+    objects = RegistroFilaManager()
+
+    inativado_em = models.DateTimeField(null=True, blank=True)
+    inativado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+    motivo_inativacao = models.TextField(blank=True)
 
     class Meta:
         db_table = 'registros_fila'
@@ -264,3 +291,55 @@ class RegistroFila(models.Model):
             f'{self.publicacao} - posicao {self.posicao} - '
             f'{self.codigo_solicitacao}'
         )
+
+class AuditoriaOperacao(models.Model):
+    class Acao(models.TextChoices):
+        INATIVACAO = 'INATIVACAO', 'Inativação'
+        REATIVACAO = 'REATIVACAO', 'Reativação'
+        EXCLUSAO = 'EXCLUSAO', 'Exclusão Física'
+
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Usuário responsável'
+    )
+    
+    acao = models.CharField(
+        max_length=20, 
+        choices=Acao.choices,
+        verbose_name='Ação'
+    )
+    
+    alvo_tipo = models.CharField(
+        max_length=50, 
+        verbose_name='Tipo de Alvo'
+    )
+    alvo_id = models.IntegerField(
+        verbose_name='ID do Alvo'
+    )
+    
+    codigo_solicitacao = models.CharField(
+        max_length=50, 
+        blank=True,
+        verbose_name='Código da Solicitação'
+    )
+
+    motivo = models.TextField(
+        verbose_name='Motivo / Justificativa'
+    )
+    
+    criado_em = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Data/Hora da Ação'
+    )
+
+    class Meta:
+        db_table = 'auditoria_operacoes'
+        verbose_name = 'Auditoria de Operação'
+        verbose_name_plural = 'Auditorias de Operações'
+        ordering = ['-criado_em']
+
+    def __str__(self):
+        return f'{self.get_acao_display()} - {self.alvo_tipo} #{self.alvo_id} ({self.criado_em:%d/%m/%Y %H:%M})'

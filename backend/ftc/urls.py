@@ -18,7 +18,7 @@ from .views import (
     PacienteListView,
 )
 
-from ftc.views.fila import ConsultaPosicaoFilaAPIView
+from ftc.views.fila import ConsultaPosicaoFilaAPIView, EspecialidadeDestroyView, RegistroFilaInativarView, RegistroFilaReativarView
 
 urlpatterns = [
     path(
@@ -72,5 +72,20 @@ urlpatterns = [
         'pacientes/',
         PacienteListView.as_view(),
         name='pacientes'
+    ),
+    path(
+        'admin/filas/especialidades/<int:pk>/', 
+        EspecialidadeDestroyView.as_view(), 
+        name='fila-especialidade-destroy'
+    ),
+    path(
+        'admin/filas/registros/<int:pk>/inativar/', 
+        RegistroFilaInativarView.as_view(), 
+        name='registro-inativar'
+    ),
+    path(
+        'admin/filas/registros/<int:pk>/reativar/',
+        RegistroFilaReativarView.as_view(),
+        name='registro-reativar'
     ),
 ]
