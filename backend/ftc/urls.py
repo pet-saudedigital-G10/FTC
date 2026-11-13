@@ -16,6 +16,7 @@ from .views import (
     EspecialidadeListView,
     FilaOpcoesView,
     RegistroFilaComprovanteView,
+    RegistroFilaHistoricoView,
     RegistroFilaListView,
     PacienteListView,
 )
@@ -68,6 +69,11 @@ urlpatterns = [
         'filas/registros/<int:pk>/comprovante/',
         RegistroFilaComprovanteView.as_view(),
         name='fila-registro-comprovante',
+    ),
+    path(
+        'filas/registros/<int:pk>/historico/',
+        RegistroFilaHistoricoView.as_view(),
+        name='fila-registro-historico',
     ),
     path(
         'filas/especialidades/',

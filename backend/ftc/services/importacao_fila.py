@@ -11,8 +11,8 @@ from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
 
-from ftc.models import Especialidade, PublicacaoFila, RegistroFila
-from ftc.utils.masking import mask_cns, mask_name
+from ftc.models import Especialidade, Paciente, PublicacaoFila, RegistroFila
+from ftc.utils.masking import mask_cns, mask_cpf, mask_name
 
 
 logger = logging.getLogger(__name__)
@@ -64,6 +64,13 @@ def _mascarar_nome(valor):
         else:
             mascaradas.append(mask_name(parte).upper())
     return ' '.join(mascaradas)
+
+
+def _extrair_cns_completo(valor):
+    texto = str(valor or '').strip()
+    if re.fullmatch(r'\d{15}', texto):
+        return texto
+    return None
 
 
 def _mascarar_cns(valor):
@@ -140,17 +147,31 @@ def _converter_linha(celulas, numero_pagina, numero_linha):
         raise ErroImportacaoPDF(f'Posicao invalida na {local}.')
 
     try:
-        return {
-            'data_solicitacao': _converter_data(celulas[0]),
-            'nome_mascarado': _mascarar_nome(celulas[1]),
-            'ano_nascimento': ano_nascimento,
-            'cns_mascarado': _mascarar_cns(celulas[3]),
-            'sexo': _converter_sexo(celulas[4]),
-            'codigo_solicitacao': codigo,
-            'posicao': posicao,
-        }
+        data_solicitacao = _converter_data(celulas[0])
+        nome_mascarado = _mascarar_nome(celulas[1])
+        cns_completo = _extrair_cns_completo(celulas[3])
+        paciente_por_cns = (
+            Paciente.objects.filter(cns=cns_completo).first()
+            if cns_completo
+            else None
+        )
+        cns_mascarado = _mascarar_cns(celulas[3])
+        sexo = _converter_sexo(celulas[4])
     except ErroImportacaoPDF as exc:
         raise ErroImportacaoPDF(f'{exc} Local: {local}.') from exc
+
+    registro = {
+        'data_solicitacao': data_solicitacao,
+        'nome_mascarado': nome_mascarado,
+        'ano_nascimento': ano_nascimento,
+        'cns_mascarado': cns_mascarado,
+        'sexo': sexo,
+        'codigo_solicitacao': codigo,
+        'posicao': posicao,
+    }
+    if cns_completo is not None:
+        registro['paciente'] = paciente_por_cns
+    return registro
 
 
 def extrair_registros_pdf(arquivo, especialidade):
@@ -250,6 +271,84 @@ def calcular_hash_arquivo(arquivo):
     return digest.hexdigest()
 
 
+def _associar_pacientes_registros(registros, especialidade):
+    codigos = [registro['codigo_solicitacao'] for registro in registros]
+    anteriores_qs = (
+        RegistroFila.objects
+        .filter(
+            publicacao__especialidade=especialidade,
+            publicacao__status__in=(
+                PublicacaoFila.Status.PUBLICADA,
+                PublicacaoFila.Status.ARQUIVADA,
+            ),
+            codigo_solicitacao__in=codigos,
+        )
+        .select_related('paciente')
+    )
+
+    anteriores_por_codigo = {}
+    for anterior in anteriores_qs:
+        anteriores_por_codigo.setdefault(
+            anterior.codigo_solicitacao,
+            [],
+        ).append(anterior)
+
+    registros_resolvidos = []
+    for registro in registros:
+        item = dict(registro)
+        cns_completo_informado = 'paciente' in item
+        paciente_cns = item.pop('paciente', None)
+        historico = anteriores_por_codigo.get(item['codigo_solicitacao'], [])
+
+        tem_divergencia = any(
+            ant.data_solicitacao != item['data_solicitacao']
+            or ant.cns_mascarado != item['cns_mascarado']
+            for ant in historico
+        )
+        pacientes_anteriores = {
+            ant.paciente_id: ant.paciente
+            for ant in historico
+            if ant.paciente_id is not None
+        }
+        tem_ambiguidade = len(pacientes_anteriores) > 1
+
+        paciente_resolvido = None
+        if cns_completo_informado:
+            if (
+                paciente_cns is not None
+                and not tem_divergencia
+                and not tem_ambiguidade
+                and (
+                    not pacientes_anteriores
+                    or paciente_cns.id in pacientes_anteriores
+                )
+            ):
+                paciente_resolvido = paciente_cns
+        else:
+            if (
+                not tem_divergencia
+                and not tem_ambiguidade
+                and len(pacientes_anteriores) == 1
+            ):
+                candidato = next(iter(pacientes_anteriores.values()))
+                if (
+                    not candidato.cns
+                    or mask_cns(candidato.cns) == item['cns_mascarado']
+                ):
+                    paciente_resolvido = candidato
+
+        item['paciente'] = paciente_resolvido
+        if (
+            paciente_resolvido is not None
+            and paciente_resolvido.cpf
+            and not item.get('cpf_mascarado')
+        ):
+            item['cpf_mascarado'] = mask_cpf(paciente_resolvido.cpf)
+        registros_resolvidos.append(item)
+
+    return registros_resolvidos
+
+
 def atualizar_fila_por_pdf(
     *,
     arquivo,
@@ -296,6 +395,10 @@ def atualizar_fila_por_pdf(
                 )
                 .values_list('id', flat=True)
             )
+            registros_vinculados = _associar_pacientes_registros(
+                registros,
+                especialidade,
+            )
 
             publicacao = PublicacaoFila(
                 especialidade=especialidade,
@@ -318,7 +421,7 @@ def atualizar_fila_por_pdf(
                     situacao=situacao,
                     **registro,
                 )
-                for registro in registros
+                for registro in registros_vinculados
             ])
 
             PublicacaoFila.objects.filter(id__in=anteriores).update(

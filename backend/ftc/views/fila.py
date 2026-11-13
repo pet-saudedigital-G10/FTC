@@ -12,13 +12,17 @@ from rest_framework.views import APIView
 
 from ftc.models import Especialidade, Paciente, PublicacaoFila, RegistroFila
 from ftc.permissions import IsCitizen
-from ftc.selectors import get_posicoes_paciente_ativas
+from ftc.selectors import (
+    get_posicoes_paciente_ativas,
+    get_registros_elegiveis_historico_paciente,
+)
 from ftc.serializers import (
     AtualizacaoFilaRespostaSerializer,
     AtualizacaoFilaSerializer,
     EspecialidadeSerializer,
     FilaOpcoesSerializer,
     RegistroFilaComprovanteSerializer,
+    RegistroFilaHistoricoSerializer,
     RegistroFilaSerializer,
     RegistroFilaPublicSerializer,
 )
@@ -227,6 +231,29 @@ class RegistroFilaComprovanteView(RetrieveAPIView):
             'ao cidadao autenticado.'
         ),
         responses={200: RegistroFilaComprovanteSerializer},
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+
+class RegistroFilaHistoricoView(RetrieveAPIView):
+    serializer_class = RegistroFilaHistoricoSerializer
+    permission_classes = [IsCitizen]
+
+    def get_queryset(self):
+        return get_registros_elegiveis_historico_paciente(
+            cpf=self.request.user.get_username(),
+        ).order_by('id')
+
+    @extend_schema(
+        tags=['Cidadao'],
+        summary='Visualizar historico da solicitacao na fila',
+        description=(
+            'Retorna o historico cronologico (da publicacao mais antiga para '
+            'a mais recente) de uma solicitacao pertencente ao cidadao '
+            'autenticado, considerando publicacoes publicadas e arquivadas.'
+        ),
+        responses={200: RegistroFilaHistoricoSerializer},
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
