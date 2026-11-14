@@ -14,6 +14,9 @@ export const apiRoutes = {
     process.env.NEXT_PUBLIC_ADMIN_LOGOUT_PATH ?? "/api/admin/auth/logout/",
   adminMe:
     process.env.NEXT_PUBLIC_ADMIN_ME_PATH ?? "/api/admin/auth/me/",
+  filaPublicacoes:
+    process.env.NEXT_PUBLIC_FILA_PUBLICACOES_PATH ??
+    "/api/admin/filas/atualizar/",
   filaRegistros:
     process.env.NEXT_PUBLIC_FILA_REGISTROS_PATH ?? "/api/filas/registros/",
   filaEspecialidades:

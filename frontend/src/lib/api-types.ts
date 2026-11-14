@@ -75,3 +75,15 @@ export type RegistroFilaComprovante = RegistroFila & {
   emitido_em: string;
   orientacao: string;
 };
+
+export type AtualizacaoFilaResposta = {
+  publicacao_id: number;
+  especialidade_id: number;
+  competencia: string;
+  versao: number;
+  status: "RASCUNHO" | "PUBLICADA" | "ARQUIVADA";
+  registros_importados: number;
+  publicacoes_substituidas: number[];
+  importado_em: string;
+  publicada_em: string | null;
+};

@@ -1,15 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { CheckCircle2, Upload, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { apiRoutes } from "@/lib/api-routes";
 import type {
+  AtualizacaoFilaResposta,
   Especialidade,
   FilaOpcoes,
   RegistroFila,
 } from "@/lib/api-types";
+import { AtualizarFilaModal } from "./subcomponents/AtualizarFilaModal";
 
 type Filters = {
   especialidade: string;
@@ -39,7 +41,9 @@ export default function DashboardPage() {
   const [loadingMetadata, setLoadingMetadata] = useState(true);
   const [loadingRecords, setLoadingRecords] = useState(true);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  const [atualizarFilaOpen, setAtualizarFilaOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -106,14 +110,26 @@ export default function DashboardPage() {
   }, [filters, reloadKey]);
 
   const summary = useMemo(() => ({
-    total: registros.length,
-    solicitadas: registros.filter((item) => item.tipo === "SOLICITADAS").length,
-    pendentes: registros.filter((item) => item.tipo === "PENDENTES").length,
-    baixadas: registros.filter((item) => item.tipo === "BAIXADAS").length,
+      total: registros.length,
+      solicitadas: registros.filter((item) => item.tipo === "SOLICITADAS").length,
+      pendentes: registros.filter((item) => item.tipo === "PENDENTES").length,
+      baixadas: registros.filter((item) => item.tipo === "BAIXADAS").length,
   }), [registros]);
 
   function updateFilter(name: keyof Filters, value: string) {
     setFilters((current) => ({ ...current, [name]: value }));
+  }
+
+  function handleFilaAtualizada(resultado: AtualizacaoFilaResposta) {
+    const especialidade = especialidades.find(
+      (item) => item.id === resultado.especialidade_id,
+    );
+    const nomeFila = especialidade ? ` de ${especialidade.nome}` : "";
+
+    setSuccessMessage(
+      `Fila${nomeFila} atualizada com sucesso! ${resultado.registros_importados} registro(s) importado(s) (versão ${resultado.versao}).`,
+    );
+    setReloadKey((value) => value + 1);
   }
 
   const isLoading = loadingMetadata || loadingRecords;
@@ -130,16 +146,48 @@ export default function DashboardPage() {
             Dados das publicações ativas disponibilizadas pela API.
           </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => setReloadKey((value) => value + 1)}
-          disabled={isLoading}
-          className="gap-2"
-        >
-          <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-          Atualizar
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            onClick={() => {
+              setSuccessMessage("");
+              setAtualizarFilaOpen(true);
+            }}
+            disabled={loadingMetadata}
+            className="gap-2 bg-[#004080] text-white hover:bg-[#002A58]"
+          >
+            <Upload className="h-4 w-4" />
+            Atualizar Fila
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setReloadKey((value) => value + 1)}
+            disabled={isLoading}
+            className="gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+            Atualizar
+          </Button>
+        </div>
       </div>
+
+      {successMessage && (
+        <div
+          className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+          role="status"
+        >
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+            <span>{successMessage}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSuccessMessage("")}
+            className="text-xs font-medium text-emerald-700 hover:underline"
+          >
+            Dispensar
+          </button>
+        </div>
+      )}
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
@@ -211,14 +259,16 @@ export default function DashboardPage() {
           <h2 className="font-semibold text-[#002A58]">Registros da fila</h2>
         </div>
         {error ? (
-          <p className="p-6 text-sm text-red-700" role="alert">{error}</p>
+          <p className="p-6 text-sm text-red-700" role="alert">
+            {error}
+          </p>
         ) : loadingRecords ? (
           <p className="p-6 text-sm text-slate-500">Carregando registros...</p>
         ) : registros.length === 0 ? (
           <p className="p-6 text-sm text-slate-500">Nenhum registro corresponde aos filtros.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[920px] text-left text-sm">
+            <table className="w-full min-w-[840px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-4 py-3">Posição</th>
@@ -254,6 +304,13 @@ export default function DashboardPage() {
           </div>
         )}
       </section>
+
+      <AtualizarFilaModal
+        open={atualizarFilaOpen}
+        especialidades={especialidades}
+        onClose={() => setAtualizarFilaOpen(false)}
+        onSuccess={handleFilaAtualizada}
+      />
     </div>
   );
 }
