@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { apiRoutes } from "@/lib/api-routes";
 import type {
+  AtualizacaoFilaResposta,
   Especialidade,
   FilaOpcoes,
   RegistroFila,
@@ -43,7 +44,9 @@ export default function DashboardPage() {
   const [loadingMetadata, setLoadingMetadata] = useState(true);
   const [loadingRecords, setLoadingRecords] = useState(true);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  const [atualizarFilaOpen, setAtualizarFilaOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -221,6 +224,25 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {successMessage && (
+        <div
+          className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+          role="status"
+        >
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+            <span>{successMessage}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSuccessMessage("")}
+            className="text-xs font-medium text-emerald-700 hover:underline"
+          >
+            Dispensar
+          </button>
+        </div>
+      )}
+
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
           ["Registros encontrados", summary.total],
@@ -336,6 +358,13 @@ export default function DashboardPage() {
           </div>
         )}
       </section>
+
+      <AtualizarFilaModal
+        open={atualizarFilaOpen}
+        especialidades={especialidades}
+        onClose={() => setAtualizarFilaOpen(false)}
+        onSuccess={handleFilaAtualizada}
+      />
     </div>
   );
 }
