@@ -18,6 +18,7 @@ from .fila import (
     EspecialidadeListView,
     FilaOpcoesView,
     RegistroFilaComprovanteView,
+    RegistroFilaHistoricoView,
     RegistroFilaListView,
 )
 
@@ -39,5 +40,6 @@ __all__ = [
     'EspecialidadeListView',
     'FilaOpcoesView',
     'RegistroFilaComprovanteView',
+    'RegistroFilaHistoricoView',
     'RegistroFilaListView',
 ]

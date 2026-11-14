@@ -5,6 +5,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from ftc.models import Especialidade, PublicacaoFila, RegistroFila
+from ftc.selectors import get_historico_solicitacao_paciente
 from ftc.utils.masking import mask_cns, mask_cpf, mask_name
 
 
@@ -159,6 +160,121 @@ class RegistroFilaComprovanteSerializer(RegistroFilaSerializer):
 
     def get_orientacao(self, obj: RegistroFila) -> str:
         return ORIENTACAO_COMPROVANTE_POSICAO
+
+
+class RegistroFilaHistoricoItemSerializer(serializers.ModelSerializer):
+    publicacao_id = serializers.IntegerField(source='publicacao.id', read_only=True)
+    competencia = serializers.DateField(source='publicacao.competencia', read_only=True)
+    versao = serializers.IntegerField(source='publicacao.versao', read_only=True)
+    publicada_em = serializers.DateTimeField(
+        source='publicacao.publicada_em',
+        read_only=True,
+    )
+    status_publicacao = serializers.CharField(
+        source='publicacao.status',
+        read_only=True,
+    )
+    status_publicacao_display = serializers.CharField(
+        source='publicacao.get_status_display',
+        read_only=True,
+    )
+    prioridade_display = serializers.CharField(
+        source='get_prioridade_display',
+        read_only=True,
+    )
+    tipo_display = serializers.CharField(
+        source='get_tipo_display',
+        read_only=True,
+    )
+    situacao_display = serializers.CharField(
+        source='get_situacao_display',
+        read_only=True,
+    )
+
+    class Meta:
+        model = RegistroFila
+        fields = (
+            'id',
+            'publicacao_id',
+            'competencia',
+            'versao',
+            'publicada_em',
+            'status_publicacao',
+            'status_publicacao_display',
+            'data_solicitacao',
+            'posicao',
+            'prioridade',
+            'prioridade_display',
+            'tipo',
+            'tipo_display',
+            'situacao',
+            'situacao_display',
+        )
+        read_only_fields = fields
+
+
+class RegistroFilaHistoricoSerializer(serializers.ModelSerializer):
+    especialidade_id = serializers.IntegerField(
+        source='publicacao.especialidade_id',
+        read_only=True,
+    )
+    especialidade_nome = serializers.CharField(
+        source='publicacao.especialidade.nome',
+        read_only=True,
+    )
+    especialidade_slug = serializers.CharField(
+        source='publicacao.especialidade.slug',
+        read_only=True,
+    )
+    especialidade_tipo = serializers.CharField(
+        source='publicacao.especialidade.tipo',
+        read_only=True,
+    )
+    especialidade_tipo_display = serializers.CharField(
+        source='publicacao.especialidade.get_tipo_display',
+        read_only=True,
+    )
+    nome_mascarado = serializers.SerializerMethodField()
+    cpf_mascarado = serializers.SerializerMethodField()
+    cns_mascarado = serializers.SerializerMethodField()
+    historico = serializers.SerializerMethodField()
+
+    class Meta:
+        model = RegistroFila
+        fields = (
+            'id',
+            'codigo_solicitacao',
+            'data_solicitacao',
+            'especialidade_id',
+            'especialidade_nome',
+            'especialidade_slug',
+            'especialidade_tipo',
+            'especialidade_tipo_display',
+            'nome_mascarado',
+            'cpf_mascarado',
+            'cns_mascarado',
+            'historico',
+        )
+        read_only_fields = fields
+
+    def get_nome_mascarado(self, obj: RegistroFila) -> str:
+        if obj.paciente and obj.paciente.nome_completo:
+            return mask_name(obj.paciente.nome_completo)
+        return mask_name(obj.nome_mascarado)
+
+    def get_cpf_mascarado(self, obj: RegistroFila) -> str:
+        if obj.paciente and obj.paciente.cpf:
+            return mask_cpf(obj.paciente.cpf)
+        return mask_cpf(obj.cpf_mascarado) or obj.cpf_mascarado
+
+    def get_cns_mascarado(self, obj: RegistroFila) -> str:
+        if obj.paciente and obj.paciente.cns:
+            return mask_cns(obj.paciente.cns)
+        return mask_cns(obj.cns_mascarado) or obj.cns_mascarado
+
+    def get_historico(self, obj: RegistroFila) -> list[dict]:
+        registros = get_historico_solicitacao_paciente(registro=obj)
+        return RegistroFilaHistoricoItemSerializer(registros, many=True).data
 
 
 class FiltroOpcaoSerializer(serializers.Serializer):
