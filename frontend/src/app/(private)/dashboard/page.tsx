@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { Ban, CheckCircle2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { apiRoutes } from "@/lib/api-routes";
@@ -10,6 +10,7 @@ import type {
   FilaOpcoes,
   RegistroFila,
 } from "@/lib/api-types";
+import { InativarRegistroModal } from "./subcomponents/InativarRegistroModal";
 
 type Filters = {
   especialidade: string;
@@ -39,7 +40,10 @@ export default function DashboardPage() {
   const [loadingMetadata, setLoadingMetadata] = useState(true);
   const [loadingRecords, setLoadingRecords] = useState(true);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  const [registroParaInativar, setRegistroParaInativar] =
+    useState<RegistroFila | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -105,15 +109,25 @@ export default function DashboardPage() {
     };
   }, [filters, reloadKey]);
 
-  const summary = useMemo(() => ({
-    total: registros.length,
-    solicitadas: registros.filter((item) => item.tipo === "SOLICITADAS").length,
-    pendentes: registros.filter((item) => item.tipo === "PENDENTES").length,
-    baixadas: registros.filter((item) => item.tipo === "BAIXADAS").length,
-  }), [registros]);
+  const summary = useMemo(
+    () => ({
+      total: registros.length,
+      solicitadas: registros.filter((item) => item.tipo === "SOLICITADAS").length,
+      pendentes: registros.filter((item) => item.tipo === "PENDENTES").length,
+      baixadas: registros.filter((item) => item.tipo === "BAIXADAS").length,
+    }),
+    [registros],
+  );
 
   function updateFilter(name: keyof Filters, value: string) {
     setFilters((current) => ({ ...current, [name]: value }));
+  }
+
+  function handleRegistroInativado(registro: RegistroFila) {
+    setSuccessMessage(
+      `Registro #${registro.codigo_solicitacao} (${registro.nome_mascarado}) inativado com sucesso e registrado na auditoria.`,
+    );
+    setReloadKey((value) => value + 1);
   }
 
   const isLoading = loadingMetadata || loadingRecords;
@@ -140,6 +154,25 @@ export default function DashboardPage() {
           Atualizar
         </Button>
       </div>
+
+      {successMessage && (
+        <div
+          className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+          role="status"
+        >
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+            <span>{successMessage}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSuccessMessage("")}
+            className="text-xs font-medium text-emerald-700 hover:underline"
+          >
+            Dispensar
+          </button>
+        </div>
+      )}
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
@@ -211,7 +244,9 @@ export default function DashboardPage() {
           <h2 className="font-semibold text-[#002A58]">Registros da fila</h2>
         </div>
         {error ? (
-          <p className="p-6 text-sm text-red-700" role="alert">{error}</p>
+          <p className="p-6 text-sm text-red-700" role="alert">
+            {error}
+          </p>
         ) : loadingRecords ? (
           <p className="p-6 text-sm text-slate-500">Carregando registros...</p>
         ) : registros.length === 0 ? (
@@ -228,6 +263,7 @@ export default function DashboardPage() {
                   <th className="px-4 py-3">Prioridade</th>
                   <th className="px-4 py-3">Situação</th>
                   <th className="px-4 py-3">Data</th>
+                  <th className="px-4 py-3 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -247,6 +283,21 @@ export default function DashboardPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-slate-600">{formatDate(registro.data_solicitacao)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSuccessMessage("");
+                          setRegistroParaInativar(registro);
+                        }}
+                        className="gap-1.5 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+                      >
+                        <Ban className="h-3.5 w-3.5" />
+                        Inativar
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -254,6 +305,12 @@ export default function DashboardPage() {
           </div>
         )}
       </section>
+
+      <InativarRegistroModal
+        registro={registroParaInativar}
+        onClose={() => setRegistroParaInativar(null)}
+        onSuccess={handleRegistroInativado}
+      />
     </div>
   );
 }

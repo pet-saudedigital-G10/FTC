@@ -68,3 +68,11 @@ export type RegistroFila = {
   situacao: string;
   situacao_display: string;
 };
+
+export interface OperacaoRegistroPayload {
+  motivo: string;
+}
+
+export interface OperacaoRegistroResposta {
+  status: string;
+}

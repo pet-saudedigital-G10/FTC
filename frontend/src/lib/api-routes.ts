@@ -1,3 +1,13 @@
+const adminFilaRegistrosBase = (
+  process.env.NEXT_PUBLIC_ADMIN_FILA_REGISTROS_BASE_PATH ??
+  "/api/admin/filas/registros/"
+).replace(/\/?$/, "/");
+
+const adminFilaEspecialidadesBase = (
+  process.env.NEXT_PUBLIC_ADMIN_FILA_ESPECIALIDADES_BASE_PATH ??
+  "/api/admin/filas/especialidades/"
+).replace(/\/?$/, "/");
+
 export const apiRoutes = {
   adminUsers:
     process.env.NEXT_PUBLIC_ADMIN_USERS_PATH ?? "/api/admin/users/",
@@ -9,6 +19,12 @@ export const apiRoutes = {
     process.env.NEXT_PUBLIC_ADMIN_LOGOUT_PATH ?? "/api/admin/auth/logout/",
   adminMe:
     process.env.NEXT_PUBLIC_ADMIN_ME_PATH ?? "/api/admin/auth/me/",
+  filaRegistroInativar: (registroId: number) =>
+    `${adminFilaRegistrosBase}${registroId}/inativar/`,
+  filaRegistroReativar: (registroId: number) =>
+    `${adminFilaRegistrosBase}${registroId}/reativar/`,
+  filaEspecialidadeDestroy: (especialidadeId: number) =>
+    `${adminFilaEspecialidadesBase}${especialidadeId}/`,
   filaRegistros:
     process.env.NEXT_PUBLIC_FILA_REGISTROS_PATH ?? "/api/filas/registros/",
   filaEspecialidades:
