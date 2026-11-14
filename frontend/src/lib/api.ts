@@ -106,7 +106,10 @@ async function readBody(response: Response): Promise<ApiResponseBody> {
 function requestHeaders(options: RequestInit) {
   const headers = new Headers(options.headers);
   const token = authToken();
-  if (options.body && !headers.has("Content-Type")) {
+  const isFormData =
+    typeof FormData !== "undefined" && options.body instanceof FormData;
+
+  if (options.body && !isFormData && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
   if (token && !headers.has("Authorization")) {
