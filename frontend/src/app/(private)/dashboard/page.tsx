@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Upload, RefreshCw } from "lucide-react";
+import { FileSpreadsheet, FileText, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { apiRoutes } from "@/lib/api-routes";
@@ -11,7 +11,10 @@ import type {
   FilaOpcoes,
   RegistroFila,
 } from "@/lib/api-types";
-import { AtualizarFilaModal } from "./subcomponents/AtualizarFilaModal";
+import {
+  exportarRegistrosCSV,
+  exportarRegistrosPDF,
+} from "@/lib/export-fila";
 
 type Filters = {
   especialidade: string;
@@ -114,25 +117,67 @@ export default function DashboardPage() {
       solicitadas: registros.filter((item) => item.tipo === "SOLICITADAS").length,
       pendentes: registros.filter((item) => item.tipo === "PENDENTES").length,
       baixadas: registros.filter((item) => item.tipo === "BAIXADAS").length,
-  }), [registros]);
+    }), [registros]);
+
+  const tiposMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const item of opcoes?.tipos ?? []) {
+      map[String(item.value)] = item.label;
+    }
+    return map;
+  }, [opcoes]);
+
+  const filtrosAtivosLabels = useMemo(() => {
+    const labels: string[] = [];
+    if (filters.especialidade) {
+      const esp = especialidades.find(
+        (item) => String(item.id) === filters.especialidade,
+      );
+      if (esp) labels.push(`Especialidade: ${esp.nome}`);
+    }
+    if (filters.especialidade_tipo) {
+      const cat = opcoes?.especialidade_tipos.find(
+        (item) => String(item.value) === filters.especialidade_tipo,
+      );
+      if (cat) labels.push(`Categoria: ${cat.label}`);
+    }
+    if (filters.tipo) {
+      const tipo = opcoes?.tipos.find(
+        (item) => String(item.value) === filters.tipo,
+      );
+      if (tipo) labels.push(`Tipo: ${tipo.label}`);
+    }
+    if (filters.situacao) {
+      const sit = opcoes?.situacoes.find(
+        (item) => String(item.value) === filters.situacao,
+      );
+      if (sit) labels.push(`Situação: ${sit.label}`);
+    }
+    if (filters.prioridade) {
+      const pri = opcoes?.prioridades.find(
+        (item) => String(item.value) === filters.prioridade,
+      );
+      if (pri) labels.push(`Prioridade: ${pri.label}`);
+    }
+    return labels;
+  }, [filters, especialidades, opcoes]);
 
   function updateFilter(name: keyof Filters, value: string) {
     setFilters((current) => ({ ...current, [name]: value }));
   }
 
-  function handleFilaAtualizada(resultado: AtualizacaoFilaResposta) {
-    const especialidade = especialidades.find(
-      (item) => item.id === resultado.especialidade_id,
-    );
-    const nomeFila = especialidade ? ` de ${especialidade.nome}` : "";
+  function handleExportarCSV() {
+    exportarRegistrosCSV(registros, tiposMap);
+  }
 
-    setSuccessMessage(
-      `Fila${nomeFila} atualizada com sucesso! ${resultado.registros_importados} registro(s) importado(s) (versão ${resultado.versao}).`,
-    );
-    setReloadKey((value) => value + 1);
+  function handleExportarPDF() {
+    exportarRegistrosPDF(registros, tiposMap, {
+      filtrosAtivos: filtrosAtivosLabels,
+    });
   }
 
   const isLoading = loadingMetadata || loadingRecords;
+  const canExport = !isLoading && registros.length > 0;
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
@@ -148,15 +193,24 @@ export default function DashboardPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
-            onClick={() => {
-              setSuccessMessage("");
-              setAtualizarFilaOpen(true);
-            }}
-            disabled={loadingMetadata}
-            className="gap-2 bg-[#004080] text-white hover:bg-[#002A58]"
+            type="button"
+            variant="outline"
+            onClick={handleExportarCSV}
+            disabled={!canExport}
+            className="gap-2 border-slate-300 text-[#002A58] hover:bg-slate-50"
           >
-            <Upload className="h-4 w-4" />
-            Atualizar Fila
+            <FileSpreadsheet className="h-4 w-4 text-emerald-700" />
+            Exportar CSV
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleExportarPDF}
+            disabled={!canExport}
+            className="gap-2 border-slate-300 text-[#002A58] hover:bg-slate-50"
+          >
+            <FileText className="h-4 w-4 text-[#004080]" />
+            Exportar PDF
           </Button>
           <Button
             variant="outline"
