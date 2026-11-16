@@ -1,4 +1,5 @@
 import { ShieldCheck } from "lucide-react";
+import Link from "next/link";
 import { CidadaoLoginForm } from "./CidadaoLoginForm";
 
 export function CidadaoLoginCard() {
@@ -15,6 +16,13 @@ export function CidadaoLoginCard() {
 
       {/* Formulário de Autenticação */}
       <CidadaoLoginForm />
+
+      <p className="text-center text-sm text-[#002A58]/70">
+        Ainda não possui uma conta?{" "}
+        <Link href="/cadastro" className="font-semibold text-[#004080] hover:underline">
+          Cadastre-se
+        </Link>
+      </p>
 
       {/* Box de Segurança / LGPD */}
       <div className="mt-2 bg-[#f8fafd] rounded-lg p-4 flex items-start gap-3 border-l-4 border-[#004080]">

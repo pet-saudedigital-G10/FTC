@@ -9,6 +9,7 @@ from .auth import (
     CidadaoMeView,
     CidadaoTokenObtainPairView,
     CidadaoTokenRefreshView,
+    CidadaoUserCreateView,
 )
 from .fila import (
     AtualizacaoFilaView,
@@ -16,6 +17,8 @@ from .fila import (
     ConsultaPosicaoFilaAPIView,
     EspecialidadeListView,
     FilaOpcoesView,
+    RegistroFilaComprovanteView,
+    RegistroFilaHistoricoView,
     RegistroFilaListView,
 )
 
@@ -30,10 +33,13 @@ __all__ = [
     'CidadaoMeView',
     'CidadaoTokenObtainPairView',
     'CidadaoTokenRefreshView',
+    'CidadaoUserCreateView',
     'CidadaoRegistroFilaListView',
     'ConsultaPosicaoFilaAPIView',
     'AtualizacaoFilaView',
     'EspecialidadeListView',
     'FilaOpcoesView',
+    'RegistroFilaComprovanteView',
+    'RegistroFilaHistoricoView',
     'RegistroFilaListView',
 ]

@@ -4,7 +4,7 @@ from django.db.models import Q
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status, generics, status
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import ListAPIView
+from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
@@ -12,12 +12,17 @@ from rest_framework.views import APIView
 
 from ftc.models import Especialidade, Paciente, PublicacaoFila, RegistroFila
 from ftc.permissions import IsCitizen
-from ftc.selectors import get_posicoes_paciente_ativas
+from ftc.selectors import (
+    get_posicoes_paciente_ativas,
+    get_registros_elegiveis_historico_paciente,
+)
 from ftc.serializers import (
     AtualizacaoFilaRespostaSerializer,
     AtualizacaoFilaSerializer,
     EspecialidadeSerializer,
     FilaOpcoesSerializer,
+    RegistroFilaComprovanteSerializer,
+    RegistroFilaHistoricoSerializer,
     RegistroFilaSerializer,
     RegistroFilaPublicSerializer,
 )
@@ -194,6 +199,61 @@ class CidadaoRegistroFilaListView(ListAPIView):
     @extend_schema(
         tags=['Cidadao'],
         summary='Listar registros de fila do cidadao autenticado',
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+
+class RegistroFilaComprovanteView(RetrieveAPIView):
+    serializer_class = RegistroFilaComprovanteSerializer
+    permission_classes = [IsCitizen]
+
+    def get_queryset(self):
+        return (
+            get_posicoes_paciente_ativas(
+                cpf=self.request.user.get_username(),
+            )
+            .exclude(situacao=RegistroFila.Situacao.AGENDADO)
+            .filter(
+                publicacao__status=PublicacaoFila.Status.PUBLICADA,
+                posicao__isnull=False,
+                posicao__gte=1,
+            )
+            .order_by('id')
+        )
+
+    @extend_schema(
+        tags=['Cidadao'],
+        summary='Gerar comprovante de posicao da fila',
+        description=(
+            'Retorna em formato JSON os dados do comprovante de posicao '
+            'para uma solicitacao ativa da publicacao vigente pertencente '
+            'ao cidadao autenticado.'
+        ),
+        responses={200: RegistroFilaComprovanteSerializer},
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+
+class RegistroFilaHistoricoView(RetrieveAPIView):
+    serializer_class = RegistroFilaHistoricoSerializer
+    permission_classes = [IsCitizen]
+
+    def get_queryset(self):
+        return get_registros_elegiveis_historico_paciente(
+            cpf=self.request.user.get_username(),
+        ).order_by('id')
+
+    @extend_schema(
+        tags=['Cidadao'],
+        summary='Visualizar historico da solicitacao na fila',
+        description=(
+            'Retorna o historico cronologico (da publicacao mais antiga para '
+            'a mais recente) de uma solicitacao pertencente ao cidadao '
+            'autenticado, considerando publicacoes publicadas e arquivadas.'
+        ),
+        responses={200: RegistroFilaHistoricoSerializer},
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)

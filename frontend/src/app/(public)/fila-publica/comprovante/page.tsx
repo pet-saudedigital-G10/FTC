@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -50,48 +48,71 @@ type FilaItem = {
   data_solicitacao: string;
 };
 
+type ComprovantePayload = {
+  filas: FilaItem[];
+  emitido_em: string;
+  protocolo: string;
+  sistema?: string;
+  orientacao?: string;
+};
+
 // ---------------------------------------------------------------------------
 // Conteúdo do comprovante
 // ---------------------------------------------------------------------------
 
 function ComprovantePosicao() {
-  const params = useSearchParams();
-  const [filas, setFilas] = useState<FilaItem[]>([]);
-  const [emitidoEm, setEmitidoEm] = useState("");
-  const [protocolo, setProtocolo] = useState("");
+  const [payload, setPayload] = useState<ComprovantePayload | null>();
 
   useEffect(() => {
-    // localStorage é compartilhado entre abas da mesma origem
-    const raw = localStorage.getItem("comprovante_fila");
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw) as {
-          filas: FilaItem[];
-          emitido_em: string;
-          protocolo: string;
-        };
-        setFilas(parsed.filas);
-        setEmitidoEm(parsed.emitido_em);
-        setProtocolo(parsed.protocolo);
-        // Remove após ler para não deixar dados pessoais armazenados
-        localStorage.removeItem("comprovante_fila");
-      } catch {
-        // ignora
-      }
-    }
-  }, [params]);
+    // O timer é cancelado no primeiro ciclo do Strict Mode, evitando consumir
+    // o payload antes da montagem efetiva do componente.
+    const timer = window.setTimeout(() => {
+      const raw = localStorage.getItem("comprovante_fila");
+      let nextPayload: ComprovantePayload | null = null;
 
-  if (filas.length === 0) {
+      if (raw) {
+        localStorage.removeItem("comprovante_fila");
+        try {
+          const parsed = JSON.parse(raw) as Partial<ComprovantePayload>;
+          if (
+            Array.isArray(parsed.filas) &&
+            typeof parsed.emitido_em === "string" &&
+            typeof parsed.protocolo === "string"
+          ) {
+            nextPayload = parsed as ComprovantePayload;
+          }
+        } catch {
+          nextPayload = null;
+        }
+      }
+
+      setPayload(nextPayload);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  if (payload === undefined) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-slate-500 text-sm">
-        Nenhum dado de comprovante encontrado. Realize a consulta na{" "}
-        <a href="/fila-publica" className="ml-1 text-blue-600 underline">
-          Fila Pública
-        </a>{" "}
-        e clique em &quot;Gerar Comprovante&quot;.
+      <div className="flex min-h-screen items-center justify-center text-sm text-slate-500">
+        Carregando comprovante...
       </div>
     );
   }
+
+  if (!payload || payload.filas.length === 0) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-slate-500 text-sm">
+        Nenhum dado de comprovante encontrado. Acesse sua{" "}
+        <a href="/acesso" className="ml-1 text-blue-600 underline">
+          área do cidadão
+        </a>{" "}
+        e escolha uma solicitação elegível.
+      </div>
+    );
+  }
+
+  const { filas, emitido_em: emitidoEm, protocolo } = payload;
 
   return (
     <>
@@ -136,7 +157,7 @@ function ComprovantePosicao() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-medium uppercase tracking-wider text-blue-200 mb-1">
-                  Sistema de Fila Transparente Cidadã
+                  {payload.sistema ?? "Sistema de Fila Transparente Cidadã"}
                 </p>
                 <h1 className="text-xl font-bold leading-tight">
                   Comprovante de Posição na Fila de Espera
@@ -235,10 +256,16 @@ function ComprovantePosicao() {
           {/* Rodapé com aviso */}
           <div className="bg-amber-50 border-t border-amber-200 px-6 py-4">
             <p className="text-xs text-amber-800 leading-relaxed">
-              <span className="font-semibold">⚠️ Atenção:</span> Este comprovante reflete a posição na fila no
-              momento da consulta ({formatDatetime(emitidoEm)}). A posição pode variar conforme
-              novas atualizações da lista. Os dados pessoais exibidos são parcialmente mascarados
-              para proteção da privacidade conforme a LGPD.
+              <span className="font-semibold">⚠️ Atenção:</span>{" "}
+              {payload.orientacao ?? (
+                <>
+                  Este comprovante reflete a posição na fila no momento da
+                  consulta ({formatDatetime(emitidoEm)}). A posição pode variar
+                  conforme novas atualizações da lista. Os dados pessoais exibidos
+                  são parcialmente mascarados para proteção da privacidade conforme
+                  a LGPD.
+                </>
+              )}
             </p>
           </div>
         </div>
@@ -280,20 +307,10 @@ function InfoField({
 }
 
 // ---------------------------------------------------------------------------
-// Export com Suspense (necessário para useSearchParams no App Router)
+// Página
 // ---------------------------------------------------------------------------
 
 export default function ComprovantePage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center text-slate-400 text-sm">
-          Carregando comprovante...
-        </div>
-      }
-    >
-      <ComprovantePosicao />
-    </Suspense>
-  );
+  return <ComprovantePosicao />;
 }
 
