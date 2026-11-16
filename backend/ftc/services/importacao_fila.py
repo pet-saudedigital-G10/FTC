@@ -11,6 +11,8 @@ from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
 
+from ftc.models import Especialidade, PublicacaoFila, RegistroFila, AuditoriaOperacao
+from ftc.utils.masking import mask_cns, mask_name
 from ftc.models import Especialidade, Paciente, PublicacaoFila, RegistroFila
 from ftc.utils.masking import mask_cns, mask_cpf, mask_name
 
@@ -361,6 +363,33 @@ def atualizar_fila_por_pdf(
     situacao=RegistroFila.Situacao.AGUARDANDO_REGULACAO,
 ):
     registros = extrair_registros_pdf(arquivo, especialidade)
+    
+    auditorias = AuditoriaOperacao.objects.filter(
+        alvo_tipo='RegistroFila'
+    ).order_by('criado_em').values_list('codigo_solicitacao', 'acao')
+
+    status_supressao = {}
+    for codigo, acao in auditorias:
+        if codigo:
+            status_supressao[codigo] = acao
+
+    codigos_suprimidos = {
+        codigo for codigo, acao in status_supressao.items()
+        if acao == AuditoriaOperacao.Acao.INATIVACAO
+    }
+
+    registros_filtrados = [
+        reg for reg in registros
+        if reg['codigo_solicitacao'] not in codigos_suprimidos
+    ]
+    
+    if len(registros) != len(registros_filtrados):
+        logger.info(
+            'Importacao [Especialidade: %s]: %s registros foram suprimidos da lista do PDF.',
+            especialidade.nome,
+            len(registros) - len(registros_filtrados)
+        )
+
     hash_arquivo = calcular_hash_arquivo(arquivo)
     nome_armazenado = None
     publicacao = None
@@ -421,6 +450,7 @@ def atualizar_fila_por_pdf(
                     situacao=situacao,
                     **registro,
                 )
+                for registro in registros_filtrados 
                 for registro in registros_vinculados
             ])
 
@@ -430,6 +460,7 @@ def atualizar_fila_por_pdf(
             publicacao.status = PublicacaoFila.Status.PUBLICADA
             publicacao.publicada_em = timezone.now()
             publicacao.save(update_fields=['status', 'publicada_em'])
+            
     except Exception:
         if (
             not nome_armazenado
@@ -452,12 +483,13 @@ def atualizar_fila_por_pdf(
         'substituidas=%s usuario=%s',
         publicacao.pk,
         especialidade.pk,
-        len(registros),
+        len(registros_filtrados),
         anteriores,
         importado_por.pk,
     )
+    
     return ResultadoAtualizacaoFila(
         publicacao=publicacao,
-        registros_importados=len(registros),
+        registros_importados=len(registros_filtrados),
         publicacoes_substituidas=tuple(anteriores),
     )

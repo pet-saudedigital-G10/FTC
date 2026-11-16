@@ -2,7 +2,7 @@ import unicodedata
 
 from django.db.models import Q
 from drf_spectacular.utils import OpenApiParameter, extend_schema
-from rest_framework import status
+from rest_framework import status, generics, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -26,7 +26,7 @@ from ftc.serializers import (
     RegistroFilaSerializer,
     RegistroFilaPublicSerializer,
 )
-from ftc.services import ErroImportacaoPDF, atualizar_fila_por_pdf
+from ftc.services import ErroImportacaoPDF, atualizar_fila_por_pdf, inativar_registro, reativar_registro
 
 
 class ConsultaPosicaoFilaAPIView(APIView):
@@ -81,7 +81,7 @@ class RegistroFilaListView(ListAPIView):
 
     def get_queryset(self):
         queryset = (
-            RegistroFila.objects
+            RegistroFila.objects.visiveis()
             .filter(publicacao__status=PublicacaoFila.Status.PUBLICADA)
             .select_related('publicacao', 'publicacao__especialidade')
             .order_by('publicacao__especialidade__nome', 'posicao')
@@ -187,7 +187,7 @@ class CidadaoRegistroFilaListView(ListAPIView):
     def get_queryset(self):
         paciente = Paciente.objects.get(cpf=self.request.user.get_username())
         return (
-            RegistroFila.objects
+            RegistroFila.objects.visiveis()
             .filter(
                 paciente=paciente,
                 publicacao__status=PublicacaoFila.Status.PUBLICADA,
@@ -262,7 +262,7 @@ class RegistroFilaHistoricoView(RetrieveAPIView):
 class EspecialidadeListView(ListAPIView):
     serializer_class = EspecialidadeSerializer
     permission_classes = [AllowAny]
-    queryset = Especialidade.objects.filter(ativo=True).order_by('tipo', 'nome')
+    queryset = Especialidade.objects.all().order_by('tipo', 'nome')
 
     @extend_schema(
         tags=['Fila Publica'],
@@ -346,3 +346,56 @@ class AtualizacaoFilaView(APIView):
             'publicada_em': publicacao.publicada_em,
         })
         return Response(resposta.data, status=status.HTTP_201_CREATED)
+
+class EspecialidadeDestroyView(generics.DestroyAPIView):
+    # Busca usando all_objects para conseguir inativar qualquer um
+    queryset = Especialidade.all_objects.all()
+    permission_classes = [IsAdminUser]
+
+    def perform_destroy(self, instance):
+        instance.ativo = False
+        instance.save(update_fields=['ativo'])
+
+class RegistroFilaInativarView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def patch(self, request, pk):
+        motivo = request.data.get('motivo', '').strip()
+        if not motivo:
+            return Response(
+                {'motivo': 'O motivo da inativação é obrigatório.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            registro = inativar_registro(
+                registro_id=pk, 
+                usuario=request.user, 
+                motivo=motivo
+            )
+            return Response({'status': 'Registro inativado com sucesso.'}, status=status.HTTP_200_OK)
+        except RegistroFila.DoesNotExist:
+            return Response({'erro': 'Registro não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+        except ValueError as e:
+            return Response({'erro': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class RegistroFilaReativarView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def patch(self, request, pk):
+        motivo = request.data.get('motivo', '').strip()
+        if not motivo:
+            return Response(
+                {'motivo': 'O motivo da reativação é obrigatório.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            registro = reativar_registro(
+                registro_id=pk, 
+                usuario=request.user, 
+                motivo=motivo
+            )
+            return Response({'status': 'Registro reativado com sucesso.'}, status=status.HTTP_200_OK)
+        except RegistroFila.DoesNotExist:
+            return Response({'erro': 'Registro não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
