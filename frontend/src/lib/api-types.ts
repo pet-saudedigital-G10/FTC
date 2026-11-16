@@ -48,6 +48,7 @@ export type RegistroFila = {
   publicacao_id: number;
   competencia: string;
   versao: number;
+  publicada_em: string | null;
   especialidade_id: number;
   especialidade_nome: string;
   especialidade_slug: string;
@@ -67,4 +68,22 @@ export type RegistroFila = {
   tipo_display: string;
   situacao: string;
   situacao_display: string;
+};
+
+export type RegistroFilaComprovante = RegistroFila & {
+  sistema: string;
+  emitido_em: string;
+  orientacao: string;
+};
+
+export type AtualizacaoFilaResposta = {
+  publicacao_id: number;
+  especialidade_id: number;
+  competencia: string;
+  versao: number;
+  status: "RASCUNHO" | "PUBLICADA" | "ARQUIVADA";
+  registros_importados: number;
+  publicacoes_substituidas: number[];
+  importado_em: string;
+  publicada_em: string | null;
 };

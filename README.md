@@ -274,7 +274,8 @@ Endpoints utilizados pelo frontend:
 - `POST /api/auth/cidadao/refresh/`;
 - `POST /api/auth/cidadao/logout/`;
 - `GET /api/auth/cidadao/me/`;
-- `GET /api/cidadao/filas/`.
+- `GET /api/cidadao/filas/`;
+- `GET /api/filas/registros/<id>/comprovante/`.
 
 A conta pode ser criada pela API depois que o paciente já existir. O CPF e o CNS
 devem ser enviados sem pontuação e corresponder ao mesmo paciente:
@@ -290,6 +291,30 @@ devem ser enviados sem pontuação e corresponder ao mesmo paciente:
 
 O endpoint cria somente contas comuns (`is_staff=False`). Contas administrativas
 continuam sendo cadastradas por um superusuário em `POST /api/admin/users/`.
+
+No frontend, o fluxo está disponível em `/cadastro`. Depois de validar CPF e CNS,
+a conta é criada e o login é realizado automaticamente. A área `/acesso` lista
+somente as solicitações do cidadão autenticado e permite emitir o comprovante das
+solicitações ativas elegíveis. O comprovante usa a data de emissão, os dados
+mascarados e a orientação retornados pelo backend.
+
+## Consulta pública da fila
+
+A página `/fila-publica` oferece dois modos de consulta sem autenticação:
+
+- consulta individual por CPF em `POST /api/filas/posicao/`, com resposta mínima
+  e dados pessoais mascarados;
+- lista geral em `GET /api/filas/registros/`, com filtros por especialidade,
+  categoria, tipo, situação e prioridade.
+
+As opções dos filtros e as especialidades ativas são fornecidas por:
+
+- `GET /api/filas/opcoes/`;
+- `GET /api/filas/especialidades/`.
+
+O comprovante oficial não é gerado apenas com os dados da consulta pública. Ele
+exige a sessão do cidadão e valida no backend se o registro pertence ao usuário,
+se está na publicação vigente e se a situação ainda permite emissão.
 
 ## Testes e verificações
 

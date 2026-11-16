@@ -12,8 +12,11 @@ from .views import (
     CidadaoRegistroFilaListView,
     CidadaoTokenObtainPairView,
     CidadaoTokenRefreshView,
+    CidadaoUserCreateView,
     EspecialidadeListView,
     FilaOpcoesView,
+    RegistroFilaComprovanteView,
+    RegistroFilaHistoricoView,
     RegistroFilaListView,
     PacienteListView,
 )
@@ -36,6 +39,11 @@ urlpatterns = [
     path('admin/auth/logout/', AdminLogoutView.as_view(), name='admin-logout'),
     path('admin/auth/me/', AdminMeView.as_view(), name='admin-me'),
     path(
+        'auth/cidadao/register/',
+        CidadaoUserCreateView.as_view(),
+        name='cidadao-register',
+    ),
+    path(
         'auth/cidadao/login/',
         CidadaoTokenObtainPairView.as_view(),
         name='cidadao-login',
@@ -57,6 +65,16 @@ urlpatterns = [
         name='cidadao-filas',
     ),
     path('filas/registros/', RegistroFilaListView.as_view(), name='fila-registro-list'),
+    path(
+        'filas/registros/<int:pk>/comprovante/',
+        RegistroFilaComprovanteView.as_view(),
+        name='fila-registro-comprovante',
+    ),
+    path(
+        'filas/registros/<int:pk>/historico/',
+        RegistroFilaHistoricoView.as_view(),
+        name='fila-registro-historico',
+    ),
     path(
         'filas/especialidades/',
         EspecialidadeListView.as_view(),

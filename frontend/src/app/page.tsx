@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowRight, Search, ShieldCheck, UserRound } from "lucide-react";
 import { PublicHeader } from "@/components/shared/header/PublicHeader";
 
 export default function Home() {
@@ -21,7 +21,13 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="mx-auto grid max-w-6xl gap-5 px-4 py-10 sm:px-6 md:grid-cols-2">
+        <section className="mx-auto grid max-w-6xl gap-5 px-4 py-10 sm:px-6 md:grid-cols-3">
+          <AccessCard
+            href="/fila-publica"
+            title="Consultar fila pública"
+            description="Pesquise uma posição por CPF ou consulte a lista geral com filtros."
+            icon={<Search className="h-6 w-6" />}
+          />
           <AccessCard
             href="/login"
             title="Sou cidadão"
