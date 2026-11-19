@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { FileSpreadsheet, FileText, RefreshCw } from "lucide-react";
+import {
+  Ban,
+  CheckCircle2,
+  FileSpreadsheet,
+  FileText,
+  RefreshCw,
+  Upload,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { apiRoutes } from "@/lib/api-routes";
@@ -15,6 +22,8 @@ import {
   exportarRegistrosCSV,
   exportarRegistrosPDF,
 } from "@/lib/export-fila";
+import { AtualizarFilaModal } from "./subcomponents/AtualizarFilaModal";
+import { InativarRegistroModal } from "./subcomponents/InativarRegistroModal";
 
 type Filters = {
   especialidade: string;
@@ -46,6 +55,8 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  const [registroParaInativar, setRegistroParaInativar] =
+    useState<RegistroFila | null>(null);
   const [atualizarFilaOpen, setAtualizarFilaOpen] = useState(false);
 
   useEffect(() => {
@@ -112,12 +123,15 @@ export default function DashboardPage() {
     };
   }, [filters, reloadKey]);
 
-  const summary = useMemo(() => ({
+  const summary = useMemo(
+    () => ({
       total: registros.length,
       solicitadas: registros.filter((item) => item.tipo === "SOLICITADAS").length,
       pendentes: registros.filter((item) => item.tipo === "PENDENTES").length,
       baixadas: registros.filter((item) => item.tipo === "BAIXADAS").length,
-    }), [registros]);
+    }),
+    [registros],
+  );
 
   const tiposMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -166,6 +180,25 @@ export default function DashboardPage() {
     setFilters((current) => ({ ...current, [name]: value }));
   }
 
+  function handleRegistroInativado(registro: RegistroFila) {
+    setSuccessMessage(
+      `Registro #${registro.codigo_solicitacao} (${registro.nome_mascarado}) inativado com sucesso e registrado na auditoria.`,
+    );
+    setReloadKey((value) => value + 1);
+  }
+
+  function handleFilaAtualizada(resultado: AtualizacaoFilaResposta) {
+    const especialidade = especialidades.find(
+      (item) => item.id === resultado.especialidade_id,
+    );
+    const nomeFila = especialidade ? ` de ${especialidade.nome}` : "";
+
+    setSuccessMessage(
+      `Fila${nomeFila} atualizada com sucesso! ${resultado.registros_importados} registro(s) importado(s) (versão ${resultado.versao}).`,
+    );
+    setReloadKey((value) => value + 1);
+  }
+
   function handleExportarCSV() {
     exportarRegistrosCSV(registros, tiposMap);
   }
@@ -192,6 +225,18 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            onClick={() => {
+              setSuccessMessage("");
+              setAtualizarFilaOpen(true);
+            }}
+            disabled={loadingMetadata}
+            className="gap-2 bg-[#004080] text-white hover:bg-[#002A58]"
+          >
+            <Upload className="h-4 w-4" />
+            Atualizar Fila
+          </Button>
           <Button
             type="button"
             variant="outline"
@@ -322,7 +367,7 @@ export default function DashboardPage() {
           <p className="p-6 text-sm text-slate-500">Nenhum registro corresponde aos filtros.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[840px] text-left text-sm">
+            <table className="w-full min-w-[920px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-4 py-3">Posição</th>
@@ -332,6 +377,7 @@ export default function DashboardPage() {
                   <th className="px-4 py-3">Prioridade</th>
                   <th className="px-4 py-3">Situação</th>
                   <th className="px-4 py-3">Data</th>
+                  <th className="px-4 py-3 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -351,6 +397,21 @@ export default function DashboardPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-slate-600">{formatDate(registro.data_solicitacao)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSuccessMessage("");
+                          setRegistroParaInativar(registro);
+                        }}
+                        className="gap-1.5 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+                      >
+                        <Ban className="h-3.5 w-3.5" />
+                        Inativar
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -358,6 +419,12 @@ export default function DashboardPage() {
           </div>
         )}
       </section>
+
+      <InativarRegistroModal
+        registro={registroParaInativar}
+        onClose={() => setRegistroParaInativar(null)}
+        onSuccess={handleRegistroInativado}
+      />
 
       <AtualizarFilaModal
         open={atualizarFilaOpen}

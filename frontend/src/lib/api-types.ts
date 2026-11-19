@@ -70,6 +70,13 @@ export type RegistroFila = {
   situacao_display: string;
 };
 
+export interface OperacaoRegistroPayload {
+  motivo: string;
+}
+
+export interface OperacaoRegistroResposta {
+  status: string;
+}
 export type RegistroFilaComprovante = RegistroFila & {
   sistema: string;
   emitido_em: string;
