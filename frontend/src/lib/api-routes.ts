@@ -8,6 +8,11 @@ const adminFilaEspecialidadesBase = (
   "/api/admin/filas/especialidades/"
 ).replace(/\/?$/, "/");
 
+const filaComprovanteBase = (
+  process.env.NEXT_PUBLIC_FILA_COMPROVANTE_BASE_PATH ??
+  "/api/filas/registros/"
+).replace(/\/?$/, "/");
+
 export const apiRoutes = {
   adminUsers:
     process.env.NEXT_PUBLIC_ADMIN_USERS_PATH ?? "/api/admin/users/",
@@ -25,6 +30,9 @@ export const apiRoutes = {
     `${adminFilaRegistrosBase}${registroId}/reativar/`,
   filaEspecialidadeDestroy: (especialidadeId: number) =>
     `${adminFilaEspecialidadesBase}${especialidadeId}/`,
+  filaPublicacoes:
+    process.env.NEXT_PUBLIC_FILA_PUBLICACOES_PATH ??
+    "/api/admin/filas/atualizar/",
   filaRegistros:
     process.env.NEXT_PUBLIC_FILA_REGISTROS_PATH ?? "/api/filas/registros/",
   filaEspecialidades:
@@ -34,6 +42,8 @@ export const apiRoutes = {
     process.env.NEXT_PUBLIC_FILA_OPCOES_PATH ?? "/api/filas/opcoes/",
   filaPosicao:
     process.env.NEXT_PUBLIC_FILA_POSICAO_PATH ?? "/api/filas/posicao/",
+  filaComprovante: (registroId: number) =>
+    `${filaComprovanteBase}${registroId}/comprovante/`,
   pacientes:
     process.env.NEXT_PUBLIC_PACIENTES_PATH ?? "/api/pacientes/",
 

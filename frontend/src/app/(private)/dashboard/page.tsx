@@ -1,15 +1,28 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Ban, CheckCircle2, RefreshCw } from "lucide-react";
+import {
+  Ban,
+  CheckCircle2,
+  FileSpreadsheet,
+  FileText,
+  RefreshCw,
+  Upload,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { apiRoutes } from "@/lib/api-routes";
 import type {
+  AtualizacaoFilaResposta,
   Especialidade,
   FilaOpcoes,
   RegistroFila,
 } from "@/lib/api-types";
+import {
+  exportarRegistrosCSV,
+  exportarRegistrosPDF,
+} from "@/lib/export-fila";
+import { AtualizarFilaModal } from "./subcomponents/AtualizarFilaModal";
 import { InativarRegistroModal } from "./subcomponents/InativarRegistroModal";
 
 type Filters = {
@@ -44,6 +57,7 @@ export default function DashboardPage() {
   const [reloadKey, setReloadKey] = useState(0);
   const [registroParaInativar, setRegistroParaInativar] =
     useState<RegistroFila | null>(null);
+  const [atualizarFilaOpen, setAtualizarFilaOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -119,6 +133,49 @@ export default function DashboardPage() {
     [registros],
   );
 
+  const tiposMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const item of opcoes?.tipos ?? []) {
+      map[String(item.value)] = item.label;
+    }
+    return map;
+  }, [opcoes]);
+
+  const filtrosAtivosLabels = useMemo(() => {
+    const labels: string[] = [];
+    if (filters.especialidade) {
+      const esp = especialidades.find(
+        (item) => String(item.id) === filters.especialidade,
+      );
+      if (esp) labels.push(`Especialidade: ${esp.nome}`);
+    }
+    if (filters.especialidade_tipo) {
+      const cat = opcoes?.especialidade_tipos.find(
+        (item) => String(item.value) === filters.especialidade_tipo,
+      );
+      if (cat) labels.push(`Categoria: ${cat.label}`);
+    }
+    if (filters.tipo) {
+      const tipo = opcoes?.tipos.find(
+        (item) => String(item.value) === filters.tipo,
+      );
+      if (tipo) labels.push(`Tipo: ${tipo.label}`);
+    }
+    if (filters.situacao) {
+      const sit = opcoes?.situacoes.find(
+        (item) => String(item.value) === filters.situacao,
+      );
+      if (sit) labels.push(`Situação: ${sit.label}`);
+    }
+    if (filters.prioridade) {
+      const pri = opcoes?.prioridades.find(
+        (item) => String(item.value) === filters.prioridade,
+      );
+      if (pri) labels.push(`Prioridade: ${pri.label}`);
+    }
+    return labels;
+  }, [filters, especialidades, opcoes]);
+
   function updateFilter(name: keyof Filters, value: string) {
     setFilters((current) => ({ ...current, [name]: value }));
   }
@@ -130,7 +187,30 @@ export default function DashboardPage() {
     setReloadKey((value) => value + 1);
   }
 
+  function handleFilaAtualizada(resultado: AtualizacaoFilaResposta) {
+    const especialidade = especialidades.find(
+      (item) => item.id === resultado.especialidade_id,
+    );
+    const nomeFila = especialidade ? ` de ${especialidade.nome}` : "";
+
+    setSuccessMessage(
+      `Fila${nomeFila} atualizada com sucesso! ${resultado.registros_importados} registro(s) importado(s) (versão ${resultado.versao}).`,
+    );
+    setReloadKey((value) => value + 1);
+  }
+
+  function handleExportarCSV() {
+    exportarRegistrosCSV(registros, tiposMap);
+  }
+
+  function handleExportarPDF() {
+    exportarRegistrosPDF(registros, tiposMap, {
+      filtrosAtivos: filtrosAtivosLabels,
+    });
+  }
+
   const isLoading = loadingMetadata || loadingRecords;
+  const canExport = !isLoading && registros.length > 0;
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
@@ -144,15 +224,49 @@ export default function DashboardPage() {
             Dados das publicações ativas disponibilizadas pela API.
           </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => setReloadKey((value) => value + 1)}
-          disabled={isLoading}
-          className="gap-2"
-        >
-          <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-          Atualizar
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            onClick={() => {
+              setSuccessMessage("");
+              setAtualizarFilaOpen(true);
+            }}
+            disabled={loadingMetadata}
+            className="gap-2 bg-[#004080] text-white hover:bg-[#002A58]"
+          >
+            <Upload className="h-4 w-4" />
+            Atualizar Fila
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleExportarCSV}
+            disabled={!canExport}
+            className="gap-2 border-slate-300 text-[#002A58] hover:bg-slate-50"
+          >
+            <FileSpreadsheet className="h-4 w-4 text-emerald-700" />
+            Exportar CSV
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleExportarPDF}
+            disabled={!canExport}
+            className="gap-2 border-slate-300 text-[#002A58] hover:bg-slate-50"
+          >
+            <FileText className="h-4 w-4 text-[#004080]" />
+            Exportar PDF
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setReloadKey((value) => value + 1)}
+            disabled={isLoading}
+            className="gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+            Atualizar
+          </Button>
+        </div>
       </div>
 
       {successMessage && (
@@ -310,6 +424,13 @@ export default function DashboardPage() {
         registro={registroParaInativar}
         onClose={() => setRegistroParaInativar(null)}
         onSuccess={handleRegistroInativado}
+      />
+
+      <AtualizarFilaModal
+        open={atualizarFilaOpen}
+        especialidades={especialidades}
+        onClose={() => setAtualizarFilaOpen(false)}
+        onSuccess={handleFilaAtualizada}
       />
     </div>
   );
